@@ -1979,7 +1979,7 @@ body.light .unit-add-bar select {
     <div class="panel-body">
       <div class="fg4">
         <div class="field"><label>Gross Income ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="loiGrossIncome" value="418379" class="has-prefix" data-type="currency" data-raw="418379" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-        <div class="field"><label>Expense Ratio (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" id="loiExpenseRatio" value="52.5" class="has-suffix" data-type="percent" data-raw="52.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Expense Ratio (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="loiExpenseRatio" value="52.5" class="has-suffix" data-type="percent" data-raw="52.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
         <div class="field"><label>CapEx ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="loiCapex" value="0" class="has-prefix" data-type="currency" data-raw="0" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         <div class="field"><label>Closing Costs (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="loiClosingCostsPct" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
       </div>
@@ -2174,8 +2174,6 @@ body.light .unit-add-bar select {
   </div>
 </div>
 
-</body>
-</html>
 <script>
 /* ════════════════════════════════════════════════════════════════
    GLOBAL STATE
@@ -2224,7 +2222,7 @@ function formatField(input) {
   if (input.dataset.type === 'currency') {
     input.value = '$' + raw.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   } else if (input.dataset.type === 'percent') {
-    const decimals = input.step && parseFloat(input.step) < 1 ? 2 : 1;
+    const decimals = 1;  // Always 1 decimal per spec
     input.value = raw.toFixed(decimals) + '%';
   }
 }
@@ -2321,9 +2319,12 @@ document.addEventListener('click', e => {
 function buildUnitRow(i, type, sf, units, stabPct, ipPsf, stPsf, climate) {
   const ipRentYr = Math.round(units * sf * ipPsf * 12);
   const stRentYr = Math.round(units * sf * stPsf * 12);
+  const stabVal = (stabPct*100).toFixed(0);
+  const ipPsfVal = ipPsf.toFixed(3);
+  const stPsfVal = stPsf.toFixed(3);
   return `
   <tr data-row="${i}">
-    <td><input type="text" class="ut-type" value="${type}" onchange="updateUnitFooter()"></td>
+    <td><input type="text" class="ut-type" value="${type}" data-raw="${type}" onchange="updateUnitFooter()"></td>
     <td><select class="ut-climate" onchange="updateUnitFooter()" style="background:var(--bg-primary);border:1px solid var(--border-subtle);color:var(--text-tertiary);border-radius:0.3rem;padding:0.2rem 0.3rem;font-size:0.65rem;width:100%;font-family:var(--font-display);">
       <option value="Non-Climate" ${climate==='Non-Climate'?'selected':''}>Non-CC</option>
       <option value="Climate Controlled" ${climate==='Climate Controlled'?'selected':''}>CC</option>
@@ -2331,11 +2332,11 @@ function buildUnitRow(i, type, sf, units, stabPct, ipPsf, stPsf, climate) {
       <option value="Wine" ${climate==='Wine'?'selected':''}>Wine</option>
       <option value="Office" ${climate==='Office'?'selected':''}>Office</option>
     </select></td>
-    <td class="right"><input type="number" class="ut-units" value="${units}" onchange="updateUnitFooter()"></td>
-    <td class="right"><input type="number" class="ut-sf" value="${sf}" onchange="updateUnitFooter()"></td>
-    <td class="right"><input type="number" class="ut-stab" value="${(stabPct*100).toFixed(0)}" step="1" onchange="updateUnitFooter()"></td>
-    <td class="right"><input type="number" class="ut-ippsf" value="${ipPsf.toFixed(3)}" step="0.001" onchange="updateUnitFooter()"></td>
-    <td class="right"><input type="number" class="ut-stpsf" value="${stPsf.toFixed(3)}" step="0.001" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-units" value="${units}" data-raw="${units}" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-sf" value="${sf}" data-raw="${sf}" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-stab" value="${stabVal}" data-raw="${stabVal}" step="1" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-ippsf" value="${ipPsfVal}" data-raw="${ipPsfVal}" step="0.001" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-stpsf" value="${stPsfVal}" data-raw="${stPsfVal}" step="0.001" onchange="updateUnitFooter()"></td>
     <td class="right mono" id="ut-ip-${i}">$${ipRentYr.toLocaleString()}</td>
     <td class="right mono" id="ut-st-${i}">$${stRentYr.toLocaleString()}</td>
     <td><button onclick="removeUnitRow(this)" style="background:none;border:none;color:var(--semantic-error);cursor:pointer;font-size:0.8rem;padding:0.2rem 0.4rem;border-radius:0.25rem;opacity:0.6;" title="Remove row">×</button></td>
@@ -2389,12 +2390,13 @@ function removeUnitRow(btn) {
 function getUnitData() {
   const rows = document.querySelectorAll('#unitTableBody tr');
   const data = [];
+  const _parseEl = el => el ? parseFloat(String(el.dataset?.raw || el.value).replace(/[^0-9.\-]/g,'')) || 0 : 0;
   rows.forEach((row, i) => {
-    const units  = parseFloat(row.querySelector('.ut-units')?.value) || 0;
-    const sf     = parseFloat(row.querySelector('.ut-sf')?.value) || 0;
-    const stab   = (parseFloat(row.querySelector('.ut-stab')?.value) || 80) / 100;
-    const ipPsf  = parseFloat(row.querySelector('.ut-ippsf')?.value) || 0;
-    const stPsf  = parseFloat(row.querySelector('.ut-stpsf')?.value) || 0;
+    const units  = _parseEl(row.querySelector('.ut-units'));
+    const sf     = _parseEl(row.querySelector('.ut-sf'));
+    const stab   = (_parseEl(row.querySelector('.ut-stab')) || 80) / 100;
+    const ipPsf  = _parseEl(row.querySelector('.ut-ippsf'));
+    const stPsf  = _parseEl(row.querySelector('.ut-stpsf'));
     const ipRent = Math.round(units * sf * ipPsf * 12);
     const stRent = Math.round(units * sf * stPsf * 12);
     const ipEl = document.getElementById('ut-ip-'+i);
@@ -2952,7 +2954,8 @@ function onPriceOvChange(id) {
   const downEl  = document.getElementById('ovDown'+id);
   if (downEl) { downEl.value = downAmt; downEl.dataset.raw = downAmt; }
 
-  const rate = (parseFloat(document.getElementById('ovRate'+id)?.value)||0)/100/12;
+  const rateEl = document.getElementById('ovRate'+id);
+  const rate = (rateEl ? parseFloat(String(rateEl.dataset?.raw || rateEl.value).replace(/[^0-9.\-]/g,'')) || 0 : 0)/100/12;
   const loan = basis - downAmt;
   let mp = 0;
   if (o.isIO) { mp = Math.round(loan*rate); }
@@ -2974,7 +2977,7 @@ function recalcOv() {
     const down    = _n('ovDown'+id);
     const rateV   = _n('ovRate'+id) / 100 / 12;
     const balloon = _n('ovBalloon'+id);
-    const mPmt    = parseFloat(document.getElementById('ovPmt'+id).value)     || 0;
+    const mPmt    = _n('ovPmt'+id);
     const o = loiOffers[id];
     let proceeds = 0;
     if (o.isBank) { proceeds = price; }
@@ -3336,14 +3339,27 @@ async function geocodeAddress(address) {
   } catch(e) { console.warn('Geocode error', e); }
 }
 
+// Overpass API endpoints with fallback mirror
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+];
+let _overpassRetryTimer = null;
+
 function onRadiusChange(val) {
   document.getElementById('mapRadiusVal').textContent = val + ' mi';
   if (subjectLatLng) {
-    queryNearbyStorage(subjectLatLng[0], subjectLatLng[1], parseFloat(val));
+    // Debounce rapid slider changes
+    clearTimeout(_overpassRetryTimer);
+    _overpassRetryTimer = setTimeout(() => {
+      queryNearbyStorage(subjectLatLng[0], subjectLatLng[1], parseFloat(val));
+    }, 300);
   }
 }
 
-async function queryNearbyStorage(lat, lng, radiusMiles) {
+async function queryNearbyStorage(lat, lng, radiusMiles, endpointIdx = 0, attempt = 1) {
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 1000;
   const radiusM = radiusMiles * 1609.34;
   const countEl = document.getElementById('mapPoiCount');
   if (countEl) countEl.textContent = 'Searching…';
@@ -3363,8 +3379,7 @@ async function queryNearbyStorage(lat, lng, radiusMiles) {
     opacity: 0.5,
   }).addTo(mapInstance);
 
-  try {
-    const query = `[out:json][timeout:25];
+  const query = `[out:json][timeout:25];
 (
   node["shop"="storage"](around:${Math.round(radiusM)},${lat},${lng});
   way["shop"="storage"](around:${Math.round(radiusM)},${lat},${lng});
@@ -3374,11 +3389,40 @@ async function queryNearbyStorage(lat, lng, radiusMiles) {
 );
 out center;`;
 
-    const res  = await fetch('https://overpass-api.de/api/interpreter', {
+  try {
+    const endpoint = OVERPASS_ENDPOINTS[endpointIdx] || OVERPASS_ENDPOINTS[0];
+    const res = await fetch(endpoint, {
       method: 'POST',
       body: 'data=' + encodeURIComponent(query)
     });
-    const data = await res.json();
+
+    // Check status before parsing
+    if (res.status === 429 || res.status === 503) {
+      // Rate limited or service unavailable — retry with backoff or try mirror
+      if (attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt - 1);
+        if (countEl) countEl.textContent = `Rate limited, retrying in ${delay/1000}s…`;
+        await new Promise(r => setTimeout(r, delay));
+        return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx, attempt + 1);
+      } else if (endpointIdx + 1 < OVERPASS_ENDPOINTS.length) {
+        // Try next mirror
+        if (countEl) countEl.textContent = 'Trying backup server…';
+        return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx + 1, 1);
+      }
+      throw new Error(`Overpass API unavailable (${res.status})`);
+    }
+
+    if (!res.ok) {
+      throw new Error(`Overpass API error: ${res.status}`);
+    }
+
+    // Read as text first to detect XML error responses
+    const text = await res.text();
+    if (text.startsWith('<')) {
+      throw new Error('Overpass API returned XML error (query syntax error)');
+    }
+
+    const data = JSON.parse(text);
     const elements = data.elements || [];
     let count = 0;
 
@@ -3431,6 +3475,11 @@ out center;`;
       : 'No storage facilities found nearby';
   } catch(e) {
     console.warn('Overpass error', e);
+    // Try fallback mirror if available
+    if (endpointIdx + 1 < OVERPASS_ENDPOINTS.length) {
+      if (countEl) countEl.textContent = 'Trying backup server…';
+      return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx + 1, 1);
+    }
     if (countEl) countEl.textContent = 'Search failed — check connection';
   }
 }
@@ -3614,6 +3663,7 @@ function applyTheme(t) {
   r.setProperty("--accent-primaryMuted",  t.accent.primaryMuted);
   r.setProperty("--accent-primaryBorder", t.accent.primaryBorder);
   r.setProperty("--accent-green",         t.accent.green);
+  r.setProperty("--accent-greenHover",    t.accent.greenHover);
   r.setProperty("--accent-greenMuted",    t.accent.greenMuted);
 
   // Text
@@ -3666,6 +3716,13 @@ function applyTheme(t) {
 
   // Store on html element for CSS selectors if needed
   document.documentElement.setAttribute("data-theme", t === darkTheme ? "dark" : "light");
+
+  // Toggle body.light class for CSS selectors that use it
+  if (t === darkTheme) {
+    document.body.classList.remove("light");
+  } else {
+    document.body.classList.add("light");
+  }
 }
 
 /* ── useTheme state ── */
@@ -3692,14 +3749,13 @@ function updateToggleBtn() {
   if (!icon || !label) return;
   if (_currentMode === "dark") {
     label.textContent = "Light";
-    lucide.createIcons({ icons: {}, attrs: {} });   // re-render
     icon.setAttribute("data-lucide", "sun");
   } else {
     label.textContent = "Dark";
     icon.setAttribute("data-lucide", "moon");
   }
   // Re-render Lucide icons
-  if (window.lucide) lucide.createIcons();
+  if (window.lucide) lucide.createIcons({ icons: lucide.icons });
 }
 
 /* ── Init on DOMContentLoaded ── */
@@ -3715,7 +3771,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateToggleBtn();
 
   // Render Lucide icons
-  if (window.lucide) lucide.createIcons();
+  if (window.lucide) lucide.createIcons({ icons: lucide.icons });
 
   // Init unit table
   initUnitTable();
@@ -3731,3 +3787,5 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 </script>
+</body>
+</html>
