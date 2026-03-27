@@ -1,0 +1,3313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StorageIQ — Self-Storage Acquisition Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>window.addEventListener("load",function(){if(typeof L!=="undefined"&&L.Icon&&L.Icon.Default){delete L.Icon.Default.prototype._getIconUrl;L.Icon.Default.mergeOptions({iconRetinaUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",iconUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",shadowUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"});}});</script>
+<style>
+/* ══════════════════════════════════════════════════════
+   DESIGN SYSTEM
+══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   PARCYL v2 — CSS TOKEN BRIDGE
+   JS applyTheme() writes these vars on every mode switch
+══════════════════════════════════════════════════════ */
+:root {
+  /* populated by applyTheme() on DOMContentLoaded */
+  --bg-primary:       #1C1C1E;
+  --bg-secondary:     #2C2C2E;
+  --bg-tertiary:      #3A3A3C;
+  --bg-elevated:      #48484A;
+
+  --accent-primary:       #3EAA42;
+  --accent-primaryHover:  #359438;
+  --accent-primaryMuted:  rgba(62,170,66,0.12);
+  --accent-primaryBorder: rgba(62,170,66,0.30);
+  --accent-green:         #34C759;
+  --accent-greenMuted:    rgba(52,199,89,0.12);
+
+  --text-primary:     rgba(255,255,255,1.0);
+  --text-secondary:   rgba(255,255,255,0.80);
+  --text-tertiary:    rgba(255,255,255,0.55);
+  --text-quaternary:  rgba(255,255,255,0.35);
+
+  --border-subtle:    rgba(255,255,255,0.08);
+  --border-default:   rgba(255,255,255,0.12);
+  --border-strong:    rgba(255,255,255,0.20);
+
+  --semantic-success: #34C759;
+  --semantic-warning: #FFD60A;
+  --semantic-error:   #FF453A;
+  --semantic-info:    #0A84FF;
+
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-mono:    var(--font-mono);
+
+  /* Legacy aliases (used throughout CSS) */
+  --ink:    var(--bg-primary);
+  --ink2:   var(--bg-secondary);
+  --ink3:   var(--bg-tertiary);
+  --seam:   var(--border-subtle);
+  --seam2:  var(--border-default);
+  --fog:    var(--text-quaternary);
+  --mist:   var(--text-tertiary);
+  --ghost:  var(--text-secondary);
+  --white:  var(--text-primary);
+  --blue:       var(--accent-primary);
+  --blue-lt:    var(--accent-green);
+  --blue-glow:  var(--accent-primaryMuted);
+  --teal:       var(--semantic-info);
+  --teal-lt:    #5AC8FA;
+  --amber:      #FF9F0A;
+  --amber-lt:   var(--semantic-warning);
+  --emerald:    var(--semantic-success);
+  --emerald-lt: var(--semantic-success);
+  --red:        var(--semantic-error);
+  --red-lt:     var(--semantic-error);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body {
+  font-family: var(--font-display);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* grain overlay — dark only */
+body:not(.light)::after {
+  content:'';
+  position:fixed;inset:0;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  z-index:9999;opacity:0.4;
+}
+
+/* ── scrollbar ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg-primary)}
+::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:3px}
+body.light ::-webkit-scrollbar-track{background:#F2F2F7}
+body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
+
+/* ══════════════════════════════════════════════════════
+   APP SHELL — SCREENS
+══════════════════════════════════════════════════════ */
+.screen {
+  display:none;
+  min-height:100vh;
+  animation: screenIn 0.45s cubic-bezier(0.16,1,0.3,1) both;
+}
+.screen.active { display:block; }
+
+@keyframes screenIn {
+  from { opacity:0; transform:translateY(24px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════════
+   TOP NAV
+══════════════════════════════════════════════════════ */
+.topnav {
+  position: sticky; top:0; z-index:100;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0.875rem 2rem;
+  background: rgba(28,28,30,0.9);
+  backdrop-filter: blur(16px) saturate(1.6);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.25s, border-color 0.25s;
+}
+/* light mode topnav handled by JS applyTheme() via data-theme attr */
+
+.nav-brand {
+  display:flex; align-items:center; gap:0.75rem;
+}
+.nav-icon {
+  width:2.25rem; height:2.25rem;
+  background: linear-gradient(135deg, var(--accent-primaryHover), var(--accent-primary));
+  border-radius:0.5rem;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 0 16px var(--accent-primaryMuted);
+  transition: all 0.2s;
+}
+.nav-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.nav-wordmark sup {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color: var(--accent-green);
+  vertical-align: super;
+  margin-left:2px;
+}
+.nav-steps {
+  display:flex; align-items:center; gap:0.25rem;
+}
+.nav-step {
+  display:flex; align-items:center; gap:0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.nav-step.active {
+  background: rgba(62,170,66,0.12);
+  border-color: rgba(62,170,66,0.30);
+  color: var(--accent-green);
+}
+.nav-step-num {
+  width:1.25rem; height:1.25rem;
+  border-radius:50%;
+  background:var(--seam);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.6rem;
+  font-weight:800;
+}
+.nav-step.active .nav-step-num {
+  background: var(--blue);
+  color:#fff;
+}
+.nav-step-sep {
+  width:2rem; height:1px;
+  background: var(--seam);
+}
+
+.nav-cta {
+  font-size: 0.7rem;
+  font-weight:700;
+  font-family:var(--font-display);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  background: var(--accent-primary);
+  color:#fff;
+  padding: 0.5rem 1.25rem;
+  border-radius:2rem;
+  border:none;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.nav-cta:hover { background: var(--accent-primaryHover); transform:translateY(-1px); }
+
+/* ══════════════════════════════════════════════════════
+   SCREEN 1 — STORAGEIQ UNDERWRITING
+══════════════════════════════════════════════════════ */
+.uw-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+}
+
+/* Hero banner */
+.uw-hero {
+  display:flex; align-items:flex-end; justify-content:space-between;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.uw-hero-left h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.uw-hero-left h1 em {
+  color: var(--accent-green);
+  font-style:italic;
+}
+.uw-hero-left p {
+  font-size: 0.8rem;
+  color: var(--text-quaternary);
+  margin-top: 0.4rem;
+  letter-spacing: 0.02em;
+}
+.uw-hero-badge {
+  display:flex; align-items:center; gap:0.5rem;
+  font-size:0.6rem;
+  font-weight:700;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color: var(--teal-lt);
+  background: rgba(13,148,136,0.1);
+  border: 1px solid rgba(13,148,136,0.3);
+  padding: 0.4rem 1rem;
+  border-radius:2rem;
+}
+
+/* Results ticker */
+.results-bar {
+  display:grid; grid-template-columns:repeat(6,1fr);
+  gap:1px;
+  background: var(--seam);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  overflow:hidden;
+  margin-bottom: 2rem;
+}
+.results-bar.hidden { display:none; }
+.rb-cell {
+  background: var(--bg-secondary);
+  padding: 0.85rem 1rem;
+  text-align:center;
+}
+.rb-cell .rb-label {
+  font-size:0.55rem;
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color: var(--text-quaternary);
+  margin-bottom:0.2rem;
+}
+.rb-cell .rb-value {
+  font-family:var(--font-mono);
+  font-size: 1rem;
+  font-weight:600;
+  color: var(--text-primary);
+}
+.rb-cell .rb-value.green  { color: var(--semantic-success); }
+.rb-cell .rb-value.amber  { color: var(--semantic-warning); }
+.rb-cell .rb-value.red    { color: var(--semantic-error); }
+.rb-cell .rb-value.blue   { color: var(--accent-green); }
+.rb-cell .rb-value.teal   { color: var(--semantic-info); }
+
+/* Panel grid */
+.panel-grid {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.panel-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.panel-grid.full  { grid-template-columns: 1fr; }
+
+/* Card panel */
+.panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  overflow: hidden;
+}
+.panel-head {
+  display:flex; align-items:center; gap:0.5rem;
+  padding: 0.8rem 1.25rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.panel-head.accent-blue  { background:linear-gradient(90deg, var(--accent-primaryMuted), rgba(62,170,66,0.06)); border-bottom-color:var(--accent-primaryBorder); }
+.panel-head.accent-teal  { background:linear-gradient(90deg, rgba(10,132,255,0.08), rgba(10,132,255,0.04)); border-bottom-color:rgba(10,132,255,0.2); }
+.panel-head.accent-amber { background:linear-gradient(90deg, rgba(255,159,10,0.08), rgba(255,159,10,0.04)); border-bottom-color:rgba(255,159,10,0.2); }
+.panel-title {
+  font-size:0.6rem;
+  font-weight:700;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color: var(--text-tertiary);
+}
+.panel-title.blue  { color: var(--accent-green); }
+.panel-title.teal  { color: var(--semantic-info); }
+.panel-title.amber { color: var(--semantic-warning); }
+.panel-body { padding: 1.25rem; }
+
+/* Field */
+.field {
+  display:flex; flex-direction:column; gap:0.3rem;
+}
+.field label {
+  font-size:0.58rem;
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color: var(--text-quaternary);
+}
+.field input,
+.field select,
+.field textarea {
+  width:100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  font-family:var(--font-mono);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance:textfield;
+}
+.field input::-webkit-outer-spin-button,
+.field input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline:none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(62,170,66,0.12);
+}
+.field select { cursor:pointer; }
+.field textarea { resize:vertical; line-height:1.5; font-family:var(--font-display); }
+.field input:disabled { opacity:0.35; cursor:not-allowed; }
+
+/* Field grid helpers */
+.fg2 { display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; }
+.fg3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.65rem; }
+.fg4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0.65rem; }
+.fstack { display:flex; flex-direction:column; gap:0.65rem; }
+
+/* Unit table */
+.unit-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size: 0.72rem;
+}
+.unit-table thead tr {
+  background: var(--bg-tertiary);
+}
+.unit-table th {
+  padding: 0.6rem 0.75rem;
+  text-align:left;
+  font-size:0.55rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color: var(--text-quaternary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.unit-table th.right { text-align:right; }
+.unit-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-tertiary);
+}
+.unit-table td.mono { font-family:var(--font-mono); }
+.unit-table td.right { text-align:right; }
+.unit-table td input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  width:100%;
+  padding: 0.2rem 0.35rem;
+  font-size:0.72rem;
+  font-family:var(--font-mono);
+  -moz-appearance:textfield;
+}
+.unit-table td input:focus {
+  outline:none;
+  border-bottom-color: var(--accent-primary);
+}
+.unit-table td input::-webkit-outer-spin-button,
+.unit-table td input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.unit-table tbody tr:hover { background:rgba(255,255,255,0.02); }
+.unit-table tfoot td {
+  font-weight:700;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+  padding-top:0.75rem;
+  font-family:var(--font-mono);
+}
+
+/* Buttons */
+.btn-run {
+  width:100%;
+  background: linear-gradient(135deg, var(--accent-primaryHover), var(--accent-primary));
+  color:#fff;
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:0.85rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  padding:1rem;
+  border:none;
+  border-radius:0.75rem;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:0.6rem;
+  transition:all 0.2s;
+  box-shadow: 0 4px 20px rgba(62,170,66,0.25);
+}
+.btn-run:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(62,170,66,0.38); }
+.btn-run:active { transform:scale(0.98); }
+
+.btn-proceed {
+  width:100%;
+  background: linear-gradient(135deg, var(--accent-primaryHover), var(--accent-primary));
+  color:#fff;
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:1rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  padding:1.25rem;
+  border:none;
+  border-radius:0.875rem;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:0.75rem;
+  transition:all 0.2s;
+  box-shadow: 0 4px 24px rgba(62,170,66,0.3);
+  margin-top:1.5rem;
+}
+.btn-proceed:hover { transform:translateY(-2px); box-shadow:0 8px 36px rgba(62,170,66,0.45); }
+
+/* Metric card */
+.metric-row {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:var(--seam);
+  border-radius:0.5rem;
+  overflow:hidden;
+  margin-bottom:0.75rem;
+}
+.mc {
+  background:var(--bg-secondary);
+  padding:0.75rem;
+  text-align:center;
+}
+.mc .mc-l {
+  font-size:0.5rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-quaternary);
+  margin-bottom:0.2rem;
+}
+.mc .mc-v {
+  font-family:var(--font-mono);
+  font-size:1.05rem;
+  font-weight:600;
+  color:var(--text-primary);
+}
+
+/* Pro forma table */
+.pf-table {
+  width:100%; border-collapse:collapse;
+  font-size:0.72rem;
+}
+.pf-table th {
+  padding:0.55rem 0.75rem;
+  background:var(--bg-tertiary);
+  text-align:center;
+  font-size:0.55rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-quaternary);
+  border:1px solid var(--border-subtle);
+}
+.pf-table th:first-child { text-align:left; }
+.pf-table td {
+  padding:0.45rem 0.75rem;
+  border:1px solid rgba(255,255,255,0.05);
+  color:var(--text-tertiary);
+  font-family:var(--font-mono);
+  text-align:right;
+}
+.pf-table td:first-child { text-align:left; font-family:var(--font-display); font-size:0.72rem; color:var(--text-secondary); }
+.pf-table tr.section-head td { background:var(--accent-primaryMuted); color:var(--accent-green); font-weight:700; font-family:var(--font-display); letter-spacing:0.06em; font-size:0.65rem; }
+.pf-table tr.subtotal td { background:rgba(255,255,255,0.03); font-weight:600; color:var(--text-secondary); }
+.pf-table tr.total td { background:var(--accent-primaryMuted); color:var(--text-primary); font-weight:700; }
+.pf-table tr.noi td { background:var(--accent-greenMuted); color:var(--semantic-success); font-weight:700; }
+.pf-table tr.cfo td { background:rgba(10,132,255,0.08); color:var(--semantic-info); font-weight:700; }
+.pf-table tr.neg td { color:var(--semantic-error); }
+
+/* Waterfall table */
+.wf-table {
+  width:100%; border-collapse:collapse; font-size:0.72rem;
+}
+.wf-table th {
+  padding:0.55rem 0.75rem;
+  background:var(--bg-tertiary);
+  font-size:0.55rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-quaternary);
+  border:1px solid var(--border-subtle);
+  text-align:left;
+}
+.wf-table td {
+  padding:0.5rem 0.75rem;
+  border:1px solid rgba(255,255,255,0.05);
+  color:var(--text-tertiary);
+}
+.wf-table td.num { font-family:var(--font-mono); text-align:right; }
+.wf-table tr.tier td { background:rgba(62,170,66,0.04); }
+.wf-table tr.total td { background:var(--accent-primaryMuted); color:var(--text-primary); font-weight:700; }
+
+/* SWOT */
+.swot-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:0.75rem;
+}
+.swot-q {
+  border-radius:0.5rem;
+  padding:0.75rem;
+  font-size:0.72rem;
+}
+.swot-q .swot-label {
+  font-size:0.55rem; font-weight:800; letter-spacing:0.12em; text-transform:uppercase;
+  margin-bottom:0.4rem;
+}
+.swot-q ul { padding-left:1rem; display:flex; flex-direction:column; gap:0.2rem; }
+.swot-q li { color:var(--text-tertiary); }
+.swot-s { background:var(--accent-greenMuted); border:1px solid var(--accent-primaryBorder); }
+.swot-s .swot-label { color:var(--semantic-success); }
+.swot-w { background:rgba(var(--semantic-error-rgb, 255,69,58),0.08); border:1px solid rgba(255,69,58,0.2); }
+.swot-w .swot-label { color:var(--semantic-error); }
+
+/* Divider */
+.divider {
+  display:flex; align-items:center; gap:0.75rem;
+  margin: 1.75rem 0 1.25rem;
+}
+.divider .dline { flex:1; height:1px; background:var(--seam); }
+.divider .dlabel {
+  font-size:0.58rem; font-weight:800; letter-spacing:0.18em; text-transform:uppercase;
+  color:var(--text-quaternary); white-space:nowrap;
+}
+
+/* ══════════════════════════════════════════════════════
+   SCREEN 2 — REVLOI
+══════════════════════════════════════════════════════ */
+.loi-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+}
+
+.loi-hero {
+  display:flex; align-items:flex-end; justify-content:space-between;
+  margin-bottom:2rem;
+  padding-bottom:1.5rem;
+  border-bottom:1px solid var(--border-subtle);
+}
+.loi-hero h1 {
+  font-family:var(--font-display);
+  font-size:2.5rem;
+  color:var(--text-primary);
+  letter-spacing:-0.02em;
+  line-height:1.05;
+}
+.loi-hero h1 em { color:var(--accent-green); font-style:italic; }
+.loi-hero p { font-size:0.78rem; color:var(--text-quaternary); margin-top:0.35rem; }
+
+/* Pulled-in summary from underwriting */
+.deal-summary-strip {
+  display:grid; grid-template-columns:repeat(5,1fr);
+  gap:1px;
+  background:var(--seam);
+  border-radius:0.75rem; overflow:hidden;
+  margin-bottom:1.75rem;
+  border:1px solid var(--border-subtle);
+}
+.ds-cell {
+  background:var(--bg-secondary);
+  padding:0.85rem 0.75rem;
+  text-align:center;
+}
+.ds-cell .ds-l { font-size:0.52rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-quaternary); margin-bottom:0.2rem; }
+.ds-cell .ds-v { font-family:var(--font-mono); font-size:0.9rem; font-weight:600; color:var(--text-primary); }
+.ds-cell .ds-v.blue  { color:var(--accent-green); }
+.ds-cell .ds-v.green { color:var(--semantic-success); }
+.ds-cell .ds-v.teal  { color:var(--semantic-info); }
+
+/* LOI option columns */
+.loi-col {
+  background: var(--bg-secondary);
+  border:1px solid var(--border-subtle);
+  border-radius:0.75rem;
+  padding:1.25rem;
+}
+.loi-col.featured {
+  border-color:var(--accent-primaryBorder);
+  box-shadow:0 0 20px var(--accent-primaryMuted);
+}
+.loi-col-title {
+  font-size:0.58rem;
+  font-weight:800;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  text-align:center;
+  padding-bottom:0.75rem;
+  margin-bottom:0.85rem;
+  border-bottom:1px solid var(--border-subtle);
+  color:var(--text-tertiary);
+}
+.loi-col.featured .loi-col-title { color:var(--accent-green); }
+
+/* Summary card */
+.sum-card {
+  background:var(--bg-secondary);
+  border:1px solid var(--border-subtle);
+  border-radius:0.875rem;
+  padding:1.25rem;
+}
+.sum-card.featured {
+  border-color:var(--accent-primaryBorder);
+  box-shadow:0 0 20px var(--accent-primaryMuted);
+}
+.sum-price {
+  font-family:var(--font-mono);
+  font-size:1.6rem;
+  font-weight:600;
+  color:var(--text-primary);
+  margin-bottom:0.2rem;
+}
+.sum-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:0.35rem 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  font-size:0.72rem;
+}
+.sum-row:last-child { border-bottom:none; }
+.sum-row .sl { color:var(--text-quaternary); }
+.sum-row .sv { font-family:var(--font-mono); font-size:0.68rem; font-weight:600; color:var(--text-secondary); }
+.total-pill {
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--accent-primaryMuted);
+  border:1px solid var(--accent-primaryBorder);
+  border-radius:0.45rem;
+  padding:0.55rem 0.75rem;
+  margin-top:0.75rem;
+}
+.total-pill .tl { font-size:0.55rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-green); }
+.total-pill .tv { font-family:var(--font-mono); font-weight:700; color:var(--text-primary); }
+.kpi-pair {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:0.5rem;
+  margin-top:0.65rem;
+}
+.kpi-chip {
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border-subtle);
+  border-radius:0.4rem;
+  padding:0.5rem;
+  text-align:center;
+}
+.kpi-chip .kl { font-size:0.5rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-quaternary); }
+.kpi-chip .kv { font-family:var(--font-mono); font-size:1rem; font-weight:600; color:var(--accent-green); }
+.kpi-chip .kv.gray { color:var(--accent-green); }
+
+/* Payout card */
+.payout-card {
+  background:var(--bg-secondary);
+  border:1px solid var(--border-subtle);
+  border-radius:0.875rem;
+  padding:1.25rem;
+  display:flex; flex-direction:column; justify-content:space-between;
+  height:100%;
+}
+.payout-num {
+  font-family:var(--font-display);
+  font-size:2rem;
+  color:var(--accent-green);
+  line-height:1;
+}
+
+/* Override card */
+.ov-card {
+  background:var(--bg-secondary);
+  border:1px solid var(--border-subtle);
+  border-radius:0.875rem;
+  padding:1.25rem;
+}
+.ov-proceeds {
+  font-family:var(--font-mono);
+  font-size:1.3rem;
+  font-weight:600;
+  color:var(--accent-green);
+}
+.capped-tag {
+  font-size:0.52rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;
+  background:rgba(239,68,68,0.15); color:var(--semantic-error);
+  border:1px solid rgba(239,68,68,0.3);
+  padding:0.2rem 0.45rem; border-radius:0.25rem;
+}
+
+/* Buyer branding panel */
+.buyer-panel {
+  background:linear-gradient(135deg, var(--accent-primaryMuted), rgba(0,0,0,0.0));
+  border:1px solid var(--accent-primaryBorder);
+  border-radius:0.875rem;
+  padding:2rem;
+}
+
+/* LOI Preview */
+#loiOutputSection {
+  display:none;
+  max-width:8.5in;
+  margin:2.5rem auto;
+  background:#fff;
+  border-radius:0.5rem;
+  padding:3.5rem 3rem;
+  box-shadow:0 8px 60px rgba(0,0,0,0.5);
+  color:#1a202c;
+  font-family:'Georgia',serif;
+  font-size:0.82rem;
+  line-height:1.65;
+}
+.loi-th { background:var(--accent-primary) !important; color:#fff !important; }
+.loi-td { padding:0.5rem 0.75rem; border:1px solid #1e293b; font-size:0.72rem; }
+.loi-tr-total { background:#dbeafe !important; font-weight:800; }
+
+/* Check label */
+.chk-label {
+  display:flex; align-items:center; gap:0.65rem;
+  cursor:pointer; padding:0.4rem; border-radius:0.4rem;
+  transition:background 0.15s;
+}
+.chk-label:hover { background:rgba(255,255,255,0.04); }
+.chk-label input[type=checkbox] { width:1.15rem; height:1.15rem; accent-color:var(--accent-primary); flex-shrink:0; }
+.chk-label span { font-size:0.78rem; font-weight:600; color:var(--text-tertiary); }
+
+/* Generate LOI button */
+.btn-loi {
+  width:100%;
+  background:linear-gradient(135deg, var(--accent-primaryHover), var(--accent-primary));
+  color:#fff;
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:0.95rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  padding:1.25rem;
+  border:none;
+  border-radius:0.75rem;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:0.65rem;
+  transition:all 0.2s;
+  box-shadow:0 4px 24px rgba(62,170,66,0.25);
+}
+.btn-loi:hover { transform:translateY(-2px); box-shadow:0 8px 36px rgba(62,170,66,0.4); }
+
+/* ══════════════════════════════════════════════════════
+   PRINT
+══════════════════════════════════════════════════════ */
+@media print {
+  .no-print { display:none !important; }
+  body { background:#fff !important; }
+  body::after { display:none !important; }
+  #loiOutputSection {
+    display:block !important;
+    margin:0 !important;
+    padding:1.5in 1in !important;
+    box-shadow:none !important;
+    border-radius:0 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════ */
+@media(max-width:900px) {
+  .panel-grid,.panel-grid.three { grid-template-columns:1fr; }
+  .results-bar { grid-template-columns:repeat(3,1fr); }
+  .deal-summary-strip { grid-template-columns:repeat(3,1fr); }
+}
+@media(max-width:600px) {
+  .fg2,.fg3,.fg4 { grid-template-columns:1fr; }
+  .results-bar { grid-template-columns:repeat(2,1fr); }
+  .swot-grid { grid-template-columns:1fr; }
+}
+
+/* ── Currency / Percentage Input Wrappers ── */
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-wrap .prefix,
+.input-wrap .suffix {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-quaternary);
+  pointer-events: none;
+  z-index: 1;
+  transition: color 0.15s;
+}
+.input-wrap .prefix { left: 0.6rem; }
+.input-wrap .suffix { right: 0.6rem; }
+.input-wrap input.has-prefix { padding-left: 1.5rem; }
+.input-wrap input.has-suffix { padding-right: 1.75rem; }
+.input-wrap:focus-within .prefix,
+.input-wrap:focus-within .suffix { color: var(--accent-primary); }
+
+/* ── Multi-select tag chips ── */
+.tag-select-wrap {
+  position: relative;
+}
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 0.45rem;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  align-items: center;
+}
+.tag-chips:hover { border-color: var(--accent-primary); }
+.tag-chips.open {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primaryMuted);
+  border-radius: 0.45rem 0.45rem 0 0;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--accent-primaryMuted);
+  border: 1px solid var(--accent-primaryBorder);
+  color: var(--accent-green);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+.tag-chip .rm {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 0 0.1rem;
+}
+.tag-chip .rm:hover { opacity: 1; }
+.tag-placeholder {
+  font-size: 0.72rem;
+  color: var(--text-quaternary);
+}
+.tag-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-primary);
+  border-top: none;
+  border-radius: 0 0 0.45rem 0.45rem;
+  z-index: 200;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.tag-dropdown.open { display: block; }
+.tag-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.1s;
+}
+.tag-option:hover { background: var(--accent-primaryMuted); color: var(--text-primary); }
+.tag-option.selected { color: var(--accent-green); }
+.tag-option .chk-icon {
+  width: 1rem; height: 1rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.2rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.6rem;
+}
+.tag-option.selected .chk-icon {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+/* ── Unit type quick-add ── */
+.unit-add-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem 0 0.5rem;
+  flex-wrap: wrap;
+}
+.unit-add-bar select {
+  flex: 1;
+  min-width: 140px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
+  font-family: var(--font-display);
+  cursor: pointer;
+}
+.unit-add-bar select:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-primaryMuted); }
+.btn-add-unit {
+  background: var(--accent-primaryMuted);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-primaryBorder);
+  border-radius: 0.4rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-add-unit:hover { background: var(--accent-primary); color: #fff; }
+
+/* ── Map container ── */
+.map-container {
+  margin-top: 0.75rem;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  display: none;
+  flex-direction: column;
+  transition: all 0.3s;
+}
+.map-container.visible { display: flex; }
+#propertyMap {
+  height: 280px;
+  width: 100%;
+  background: var(--bg-tertiary);
+}
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.map-toolbar .mt-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  white-space: nowrap;
+}
+.map-toolbar input[type=range] {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+.map-toolbar .mt-val {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-green);
+  min-width: 2rem;
+}
+.map-poi-count {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+.map-legend {
+  display: flex;
+  gap: 1rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+.legend-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Address Autocomplete Suggestions ── */
+.addr-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.1s;
+  font-family: var(--font-display);
+}
+.addr-suggestion:last-child { border-bottom: none; }
+.addr-suggestion:hover,
+.addr-suggestion.highlighted { background: var(--accent-primaryMuted); }
+.addr-suggestion .as-main {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.addr-suggestion .as-sub {
+  font-size: 0.62rem;
+  color: var(--text-quaternary);
+  margin-top: 0.1rem;
+}
+
+/* ── Row spacing fix (Unit Mix → Income/Expenses) ── */
+.section-gap { margin-top: 1.5rem; }
+
+/* ── Leaflet popup overrides ── */
+.leaflet-popup-content-wrapper {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+  color: var(--text-secondary) !important;
+  font-family: var(--font-display) !important;
+  padding: 0 !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  font-size: 0.75rem !important;
+  color: var(--text-secondary) !important;
+}
+.leaflet-popup-tip { background: var(--bg-secondary) !important; }
+.leaflet-popup-close-button { color: var(--text-tertiary) !important; top: 6px !important; right: 8px !important; }
+.poi-popup { padding: 0.75rem 0.9rem; min-width: 180px; }
+.poi-popup .poi-name { font-weight: 700; font-size: 0.8rem; color: var(--text-primary); margin-bottom: 0.2rem; }
+.poi-popup .poi-addr { font-size: 0.65rem; color: var(--text-tertiary); margin-bottom: 0.4rem; line-height: 1.4; }
+.poi-popup .poi-dist { font-family: var(--font-mono); font-size: 0.65rem; color: var(--accent-green); margin-bottom: 0.5rem; }
+.poi-popup .poi-comp-btn {
+  width: 100%;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: var(--font-display);
+  transition: background 0.15s;
+}
+.poi-popup .poi-comp-btn:hover { background: var(--accent-primaryHover); }
+
+
+@keyframes spin {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════ TOP NAV ════════════════════════ -->
+<nav class="topnav no-print">
+  <div class="nav-brand">
+    <div class="nav-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <span class="nav-wordmark">StorageIQ<sup>beta</sup></span>
+  </div>
+  <div class="nav-steps">
+    <div class="nav-step active" id="navStep1" onclick="goToScreen(1)">
+      <div class="nav-step-num">1</div> Underwrite
+    </div>
+    <div class="nav-step-sep"></div>
+    <div class="nav-step" id="navStep2" onclick="goToScreen(2)">
+      <div class="nav-step-num">2</div> Generate LOI
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <button id="themeToggleBtn" onclick="toggleAppTheme()" style="
+      display:flex;align-items:center;gap:0.4rem;
+      background:var(--bg-secondary);
+      border:1px solid var(--border-default);
+      color:var(--text-secondary);
+      padding:0.45rem 0.9rem;
+      border-radius:2rem;
+      font-size:0.65rem;
+      font-weight:700;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      cursor:pointer;
+      transition:all 0.2s;
+      font-family:var(--font-display);
+    " title="Toggle light/dark mode">
+      <i data-lucide="sun" id="themeIcon" style="width:14px;height:14px;stroke:currentColor;flex-shrink:0;"></i>
+      <span id="themeLabel">Light</span>
+    </button>
+    <button class="nav-cta" data-grad-btn onclick="runUnderwriting()">Run Analysis →</button>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN 1 — UNDERWRITING
+════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen1">
+<div class="uw-layout">
+
+  <!-- Hero -->
+  <div class="uw-hero">
+    <div class="uw-hero-left">
+      <h1>Self-Storage<br><em>Acquisition Underwriter</em></h1>
+      <p>Model revenue, expenses, debt service, returns & waterfall — then generate your LOI.</p>
+    </div>
+    <div class="uw-hero-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Live Calculation Engine
+    </div>
+  </div>
+
+  <!-- Results Ticker (hidden until calculated) -->
+  <div class="results-bar hidden" id="resultsTicker">
+    <div class="rb-cell"><div class="rb-label">Purchase Price</div><div class="rb-value blue" id="tk-price">—</div></div>
+    <div class="rb-cell"><div class="rb-label">Stab. NOI</div><div class="rb-value green" id="tk-noi">—</div></div>
+    <div class="rb-cell"><div class="rb-label">Yield on Cost</div><div class="rb-value teal" id="tk-yoc">—</div></div>
+    <div class="rb-cell"><div class="rb-label">Cash-on-Cash</div><div class="rb-value green" id="tk-coc">—</div></div>
+    <div class="rb-cell"><div class="rb-label">DSCR</div><div class="rb-value amber" id="tk-dscr">—</div></div>
+    <div class="rb-cell"><div class="rb-label">Levered IRR</div><div class="rb-value" id="tk-irr">—</div></div>
+  </div>
+
+  <!-- ROW 1: Property Info + SWOT -->
+  <div class="panel-grid">
+
+    <!-- Property Details -->
+    <div class="panel">
+      <div class="panel-head accent-blue">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        <span class="panel-title blue">Property Details</span>
+      </div>
+      <div class="panel-body fstack">
+        <div class="fg2">
+          <div class="field"><label>Property Name</label><input type="text" id="propName" value="Security Mini Storage #2"></div>
+          <div class="field"><label>City, State</label><input type="text" id="propLocation" value="Marion, Arkansas"></div>
+        </div>
+        <div class="fg2">
+          <div class="field">
+            <label>Address</label>
+            <div style="position:relative;" id="addrWrap">
+              <input type="text" id="propAddress" value="4900 I-55, Marion, AR"
+                autocomplete="off"
+                oninput="onAddressInput(this.value)"
+                onfocus="onAddressInput(this.value)"
+                onkeydown="onAddrKeydown(event)"
+                placeholder="Start typing an address…"
+                style="padding-right:2rem;">
+              <div id="addrSpinner" style="display:none;position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);width:14px;height:14px;border:2px solid var(--border-default);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+              <div id="addrSuggestions" style="
+                display:none;
+                position:absolute;
+                top:calc(100% + 4px);
+                left:0;right:0;
+                background:var(--bg-secondary);
+                border:1px solid var(--accent-primary);
+                border-radius:0.5rem;
+                z-index:500;
+                box-shadow:0 8px 32px rgba(0,0,0,0.4);
+                max-height:220px;
+                overflow-y:auto;
+              "></div>
+            </div>
+          </div>
+          <div class="field"><label>Investment Type</label>
+            <select id="investType">
+              <option value="Value-Add" selected>Value-Add</option>
+              <option value="Core">Core</option>
+              <option value="Core-Plus">Core-Plus</option>
+              <option value="Development">Development</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg4">
+          <div class="field"><label>Total Units</label><input type="number" id="totalUnits" value="335"></div>
+          <div class="field"><label>Net Rent. SF</label><input type="number" id="totalSF" value="42370"></div>
+          <div class="field"><label>Buildings</label><input type="number" id="numBuildings" value="8"></div>
+          <div class="field"><label>Year Built</label><input type="number" id="yearBuilt" value="2009"></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Management Type</label>
+            <select id="mgmtType">
+              <option value="3rd Party Management" selected>3rd Party Management</option>
+              <option value="Self-Managed">Self-Managed</option>
+            </select>
+          </div>
+          <div class="field"><label>Analysis Period (Mo)</label><input type="number" id="analysisPeriod" value="24"></div>
+        </div>
+        <!-- NEW: Climate & Access -->
+        <div class="fg2">
+          <div class="field">
+            <label>Climate Control</label>
+            <select id="climateType">
+              <option value="">Select…</option>
+              <option value="Non-Climate Controlled" selected>Non-Climate Controlled</option>
+              <option value="Climate Controlled">Climate Controlled</option>
+              <option value="Mixed (Climate + Non-Climate)">Mixed (Climate + Non-Climate)</option>
+              <option value="Wine Storage">Wine Storage</option>
+              <option value="Temperature Controlled Only">Temperature Controlled Only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Access Type</label>
+            <select id="accessType">
+              <option value="">Select…</option>
+              <option value="Drive-Up" selected>Drive-Up</option>
+              <option value="Indoor Corridor">Indoor Corridor</option>
+              <option value="Outdoor">Outdoor</option>
+              <option value="Covered">Covered</option>
+              <option value="Mixed Access">Mixed Access</option>
+              <option value="Boat / RV Storage">Boat / RV Storage</option>
+            </select>
+          </div>
+        </div>
+        <!-- NEW: Security & Amenities multi-select -->
+        <div class="fg2">
+          <div class="field">
+            <label>Security Features</label>
+            <div class="tag-select-wrap" id="securityWrap">
+              <div class="tag-chips" id="securityChips" onclick="toggleTagDrop('security')">
+                <span class="tag-placeholder">Select features…</span>
+              </div>
+              <div class="tag-dropdown" id="securityDrop">
+                <div class="tag-option" onclick="toggleTag('security','Gated Access')"><span class="chk-icon"></span>Gated Access</div>
+                <div class="tag-option" onclick="toggleTag('security','24/7 Cameras')"><span class="chk-icon"></span>24/7 Cameras</div>
+                <div class="tag-option" onclick="toggleTag('security','Keypad Entry')"><span class="chk-icon"></span>Keypad Entry</div>
+                <div class="tag-option" onclick="toggleTag('security','On-Site Manager')"><span class="chk-icon"></span>On-Site Manager</div>
+                <div class="tag-option" onclick="toggleTag('security','Motion Sensors')"><span class="chk-icon"></span>Motion Sensors</div>
+                <div class="tag-option" onclick="toggleTag('security','Individual Door Alarms')"><span class="chk-icon"></span>Individual Door Alarms</div>
+                <div class="tag-option" onclick="toggleTag('security','Perimeter Fencing')"><span class="chk-icon"></span>Perimeter Fencing</div>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Amenities</label>
+            <div class="tag-select-wrap" id="amenitiesWrap">
+              <div class="tag-chips" id="amenitiesChips" onclick="toggleTagDrop('amenities')">
+                <span class="tag-placeholder">Select amenities…</span>
+              </div>
+              <div class="tag-dropdown" id="amenitiesDrop">
+                <div class="tag-option" onclick="toggleTag('amenities','U-Haul Vendor')"><span class="chk-icon"></span>U-Haul Vendor</div>
+                <div class="tag-option" onclick="toggleTag('amenities','Moving Supplies')"><span class="chk-icon"></span>Moving Supplies</div>
+                <div class="tag-option" onclick="toggleTag('amenities','Online Rental')"><span class="chk-icon"></span>Online Rental</div>
+                <div class="tag-option" onclick="toggleTag('amenities','Auto-Pay')"><span class="chk-icon"></span>Auto-Pay</div>
+                <div class="tag-option" onclick="toggleTag('amenities','Packing Supplies')"><span class="chk-icon"></span>Packing Supplies</div>
+                <div class="tag-option" onclick="toggleTag('amenities','Climate Zones')"><span class="chk-icon"></span>Climate Zones</div>
+                <div class="tag-option" onclick="toggleTag('amenities','Freight Elevator')"><span class="chk-icon"></span>Freight Elevator</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- NEW: Zoning -->
+        <div class="fg2">
+          <div class="field">
+            <label>Zoning Type</label>
+            <select id="zoningType">
+              <option value="">Select…</option>
+              <option value="C-1 (Neighborhood Commercial)">C-1 (Neighborhood Commercial)</option>
+              <option value="C-2 (Community Commercial)">C-2 (Community Commercial)</option>
+              <option value="C-3 (General Commercial)">C-3 (General Commercial)</option>
+              <option value="I-1 (Light Industrial)">I-1 (Light Industrial)</option>
+              <option value="I-2 (Heavy Industrial)">I-2 (Heavy Industrial)</option>
+              <option value="Mixed-Use">Mixed-Use</option>
+              <option value="B-1 (Business)">B-1 (Business)</option>
+              <option value="Other / Unknown">Other / Unknown</option>
+            </select>
+          </div>
+          <div class="field"><label>Stories / Height</label>
+            <select id="heightType">
+              <option value="1-Story" selected>1-Story</option>
+              <option value="2-Story">2-Story</option>
+              <option value="3-Story">3-Story</option>
+              <option value="4+ Story">4+ Story</option>
+              <option value="Mixed Height">Mixed Height</option>
+            </select>
+          </div>
+        </div>
+        <!-- MAP -->
+        <div class="map-container" id="mapContainer">
+          <div id="propertyMap"></div>
+          <div class="map-toolbar">
+            <span class="mt-label">Search Radius</span>
+            <input type="range" id="mapRadius" min="1" max="10" value="3" step="0.5" oninput="onRadiusChange(this.value)">
+            <span class="mt-val" id="mapRadiusVal">3 mi</span>
+            <span class="map-poi-count" id="mapPoiCount"></span>
+          </div>
+          <div class="map-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#3EAA42;"></div>Subject Property</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#FF453A;"></div>Competing Storage</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#0A84FF;"></div>Other Storage</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SWOT -->
+    <div class="panel">
+      <div class="panel-head accent-teal">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--semantic-info)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+        <span class="panel-title teal">Deal Notes (SWOT)</span>
+      </div>
+      <div class="panel-body">
+        <div class="swot-grid">
+          <div class="swot-q swot-s">
+            <div class="swot-label">Strengths</div>
+            <textarea id="swotS" rows="3" style="width:100%;background:transparent;border:none;color:var(--text-tertiary);font-size:0.7rem;resize:none;font-family:var(--font-display);">Located on I-55&#10;Variety of unit sizes&#10;Established business&#10;U-Haul vendor, 4.0/5 star reviews</textarea>
+          </div>
+          <div class="swot-q swot-w">
+            <div class="swot-label">Weaknesses</div>
+            <textarea id="swotW" rows="3" style="width:100%;background:transparent;border:none;color:var(--text-tertiary);font-size:0.7rem;resize:none;font-family:var(--font-display);">Curb appeal&#10;Potential competition&#10;Lack of online presence&#10;Non-climate controlled</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Acquisition + Financing -->
+  <div class="panel-grid">
+
+    <!-- Acquisition & Capital Costs -->
+    <div class="panel">
+      <div class="panel-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span class="panel-title">Acquisition &amp; Capital Costs</span>
+      </div>
+      <div class="panel-body fstack">
+        <div class="fg2">
+          <div class="field"><label>Purchase Price ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="purchasePrice" value="2000000" class="has-prefix" data-type="currency" data-raw="2000000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Closing Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="closingCosts" value="20000" class="has-prefix" data-type="currency" data-raw="20000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Hard Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="hardCosts" value="500000" class="has-prefix" data-type="currency" data-raw="500000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Soft Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="softCosts" value="27500" class="has-prefix" data-type="currency" data-raw="27500" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>CapEx Reserve ($/unit/yr)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="capexPerUnit" value="25" class="has-prefix" data-type="currency" data-raw="25" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Financing Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="finCosts" value="44000" class="has-prefix" data-type="currency" data-raw="44000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loan Terms -->
+    <div class="panel">
+      <div class="panel-head accent-amber">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--semantic-warning)" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+        <span class="panel-title amber">Debt / Financing Assumptions</span>
+      </div>
+      <div class="panel-body fstack">
+        <div class="fg3">
+          <div class="field"><label>LTC Ratio (%)</label><div class="input-wrap"><input type="number" step="0.1" id="ltcRatio" value="65" class="has-suffix" data-type="percent" data-raw="65" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Interest Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="loanRate" value="6.5" class="has-suffix" data-type="percent" data-raw="6.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Amort (Yrs)</label><input type="number" id="loanAmort" value="30"></div>
+        </div>
+        <div class="fg3">
+          <div class="field"><label>IO Period (Mo)</label><input type="number" id="ioPeriod" value="48"></div>
+          <div class="field"><label>Loan Term (Mo)</label><input type="number" id="loanTerm" value="48"></div>
+          <div class="field"><label>Exit Cap Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="exitCapRate" value="10.5" class="has-suffix" data-type="percent" data-raw="10.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Market Cap Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="mktCapRate" value="10.0" class="has-suffix" data-type="percent" data-raw="10.0" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Selling Costs (%)</label><div class="input-wrap"><input type="number" step="0.1" id="sellCosts" value="1.5" class="has-suffix" data-type="percent" data-raw="1.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Unit Mix -->
+  <div class="panel">
+    <div class="panel-head accent-blue">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      <span class="panel-title blue">Unit Mix &amp; Rental Income</span>
+    </div>
+    <div class="panel-body">
+      <div class="unit-add-bar">
+        <select id="unitTypeSelect">
+          <optgroup label="Small Units">
+            <option value="5x5|25">5×5 — 25 SF</option>
+            <option value="5x10|50">5×10 — 50 SF</option>
+            <option value="5x15|75">5×15 — 75 SF</option>
+          </optgroup>
+          <optgroup label="Medium Units">
+            <option value="10x10|100">10×10 — 100 SF</option>
+            <option value="10x15|150">10×15 — 150 SF</option>
+            <option value="10x20|200">10×20 — 200 SF</option>
+            <option value="10x25|250">10×25 — 250 SF</option>
+          </optgroup>
+          <optgroup label="Large Units">
+            <option value="10x30|300">10×30 — 300 SF</option>
+            <option value="12x20|240">12×20 — 240 SF</option>
+            <option value="12x25|300">12×25 — 300 SF</option>
+            <option value="12x30|360">12×30 — 360 SF</option>
+          </optgroup>
+          <optgroup label="Extra Large">
+            <option value="15x30|450">15×30 — 450 SF</option>
+            <option value="20x20|400">20×20 — 400 SF</option>
+            <option value="20x30|600">20×30 — 600 SF</option>
+          </optgroup>
+          <optgroup label="Specialty">
+            <option value="RV/Boat/Vehicle|437">RV / Boat / Vehicle — 437 SF</option>
+            <option value="Wine Storage|50">Wine Storage — 50 SF</option>
+            <option value="Office/Flex|200">Office / Flex — 200 SF</option>
+            <option value="Locker|9">Locker — 9 SF</option>
+          </optgroup>
+          <optgroup label="Legacy Sizes (from model)">
+            <option value="4x6|24">4×6 — 24 SF</option>
+            <option value="4x8|32">4×8 — 32 SF</option>
+            <option value="6x6|36">6×6 — 36 SF</option>
+            <option value="6x8|48">6×8 — 48 SF</option>
+            <option value="6x10|60">6×10 — 60 SF</option>
+            <option value="6x12|72">6×12 — 72 SF</option>
+            <option value="6x16|96">6×16 — 96 SF</option>
+            <option value="8x12|96">8×12 — 96 SF</option>
+            <option value="8x14|112">8×14 — 112 SF</option>
+            <option value="8x16|128">8×16 — 128 SF</option>
+          </optgroup>
+        </select>
+        <button class="btn-add-unit" onclick="addUnitFromDropdown()">+ Add Unit Type</button>
+        <button class="btn-add-unit" onclick="addUnitRow()" style="background:transparent;color:var(--text-tertiary);border-color:var(--border-default);">+ Blank Row</button>
+      </div>
+      <table class="unit-table" id="unitTable">
+        <thead>
+          <tr>
+            <th>Unit Type</th>
+            <th>Climate</th>
+            <th class="right"># Units</th>
+            <th class="right">Avg SF</th>
+            <th class="right">Stab %</th>
+            <th class="right">In-Place $/SF/Mo</th>
+            <th class="right">Stab $/SF/Mo</th>
+            <th class="right">In-Place Rent/Yr</th>
+            <th class="right">Stab Rent/Yr</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="unitTableBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2"><strong>TOTAL / AVG</strong></td>
+            <td class="right" id="ut-tot-units">—</td>
+            <td class="right" id="ut-tot-sf">—</td>
+            <td class="right" id="ut-stab-avg">—</td>
+            <td class="right" id="ut-ip-psf">—</td>
+            <td class="right" id="ut-st-psf">—</td>
+            <td class="right" id="ut-ip-rent">—</td>
+            <td class="right" id="ut-st-rent">—</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROW 4: Income & Expenses -->
+  <div class="panel-grid section-gap">
+
+    <!-- Vacancy & Other Income -->
+    <div class="panel">
+      <div class="panel-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span class="panel-title">Income Assumptions</span>
+      </div>
+      <div class="panel-body fstack">
+        <div class="fg2">
+          <div class="field"><label>General Vacancy In-Place (%)</label><div class="input-wrap"><input type="number" step="0.1" id="vacInPlace" value="20" class="has-suffix" data-type="percent" data-raw="20" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>General Vacancy Stabilized (%)</label><div class="input-wrap"><input type="number" step="0.1" id="vacStab" value="10" class="has-suffix" data-type="percent" data-raw="10" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Credit Loss (%)</label><div class="input-wrap"><input type="number" step="0.1" id="creditLoss" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Revenue Growth Rate (%/yr)</label><div class="input-wrap"><input type="number" step="0.1" id="revGrowth" value="2" class="has-suffix" data-type="percent" data-raw="2" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        </div>
+        <div class="divider"><div class="dline"></div><div class="dlabel">Other Income (Annual)</div><div class="dline"></div></div>
+        <div class="fg2">
+          <div class="field"><label>Signup Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incSignup" value="20760" class="has-prefix" data-type="currency" data-raw="20760" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Admin Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incAdmin" value="11483" class="has-prefix" data-type="currency" data-raw="11483" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Late Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incLate" value="3092" class="has-prefix" data-type="currency" data-raw="3092" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>U-Haul / Other ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incUhaul" value="3866" class="has-prefix" data-type="currency" data-raw="3866" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operating Expenses -->
+    <div class="panel">
+      <div class="panel-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span class="panel-title">Operating Expenses ($/Unit/Yr)</span>
+      </div>
+      <div class="panel-body fstack">
+        <div class="fg2">
+          <div class="field"><label>Repairs &amp; Maintenance</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opRepairs" value="50" class="has-prefix" data-type="currency" data-raw="50" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Payroll</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opPayroll" value="100" class="has-prefix" data-type="currency" data-raw="100" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>General &amp; Administrative</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opGnA" value="75" class="has-prefix" data-type="currency" data-raw="75" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Marketing</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opMarketing" value="50" class="has-prefix" data-type="currency" data-raw="50" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Utilities</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opUtilities" value="35" class="has-prefix" data-type="currency" data-raw="35" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Landscaping / Snow</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opLandscape" value="15" class="has-prefix" data-type="currency" data-raw="15" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Security</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opSecurity" value="12" class="has-prefix" data-type="currency" data-raw="12" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Insurance</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opInsurance" value="30" class="has-prefix" data-type="currency" data-raw="30" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Property Taxes</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opTaxes" value="150" class="has-prefix" data-type="currency" data-raw="150" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Mgmt Fee (% of EGR)</label><div class="input-wrap"><input type="number" step="0.1" id="opMgmtFee" value="5" class="has-suffix" data-type="percent" data-raw="5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Expense Growth Rate (%/yr)</label><div class="input-wrap"><input type="number" step="0.1" id="expGrowth" value="2" class="has-suffix" data-type="percent" data-raw="2" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Stabilization Month</label><input type="number" id="stabMonth" value="12"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Waterfall -->
+  <div class="panel">
+    <div class="panel-head accent-teal">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--semantic-info)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="panel-title teal">Partnership Structure &amp; Distribution Waterfall</span>
+    </div>
+    <div class="panel-body">
+      <div class="fg4" style="margin-bottom:1rem;">
+        <div class="field"><label>GP Equity Share (%)</label><div class="input-wrap"><input type="number" step="0.1" id="gpShare" value="5" class="has-suffix" data-type="percent" data-raw="5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>LP Equity Share (%)</label><div class="input-wrap"><input type="number" step="0.1" id="lpShare" value="95" class="has-suffix" data-type="percent" data-raw="95" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Acq. Fee (% of LP Eq.)</label><div class="input-wrap"><input type="number" step="0.1" id="acqFee" value="0.5" class="has-suffix" data-type="percent" data-raw="0.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Disp. Fee (%)</label><div class="input-wrap"><input type="number" step="0.1" id="dispFee" value="0.5" class="has-suffix" data-type="percent" data-raw="0.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="wf-table" id="waterfallTable">
+          <thead>
+            <tr>
+              <th>Tier</th><th>Pref Return</th><th>IRR Hurdle</th>
+              <th>GP Promote %</th><th>GP Split</th><th>LP Split</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tier"><td>Preferred Return</td><td>Yes</td><td>9.0%</td><td>N/A</td><td>5.0%</td><td>95.0%</td></tr>
+            <tr class="tier"><td>2nd Tier</td><td>—</td><td>12.0%</td><td>10.0%</td><td>14.5%</td><td>85.5%</td></tr>
+            <tr class="tier"><td>3rd Tier</td><td>—</td><td>15.0%</td><td>20.0%</td><td>24.0%</td><td>76.0%</td></tr>
+            <tr class="tier"><td>4th Tier</td><td>—</td><td>Above 15%</td><td>30.0%</td><td>33.5%</td><td>66.5%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALCULATE BUTTON -->
+  <div style="margin-top:1.5rem;">
+    <button class="btn-run" data-grad-btn onclick="runUnderwriting()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+      Run Full Underwriting Analysis
+    </button>
+  </div>
+
+  <!-- RESULTS SECTION (hidden until calculated) -->
+  <div id="uwResults" style="display:none; margin-top:2.5rem;">
+
+    <div class="divider"><div class="dline"></div><div class="dlabel">Pro Forma Results</div><div class="dline"></div></div>
+
+    <!-- Pro Forma Table -->
+    <div class="panel" style="margin-bottom:1.25rem;">
+      <div class="panel-head accent-blue">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        <span class="panel-title blue">Pro Forma (Trended)</span>
+      </div>
+      <div class="panel-body" style="overflow-x:auto;">
+        <table class="pf-table" id="proFormaTable"></table>
+      </div>
+    </div>
+
+    <!-- Returns Grid -->
+    <div class="panel-grid three">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Property Returns</span></div>
+        <div class="panel-body" id="returnsProperty"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Partnership Returns</span></div>
+        <div class="panel-body" id="returnsPartnership"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Sources &amp; Uses</span></div>
+        <div class="panel-body" id="sourcesUses"></div>
+      </div>
+    </div>
+
+    <!-- Proceed to LOI Button -->
+    <button class="btn-proceed" data-grad-btn onclick="proceedToLOI()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Proceed to RevLOI Generator →
+    </button>
+  </div>
+
+</div><!-- /uw-layout -->
+</div><!-- /screen1 -->
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN 2 — REVLOI
+════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen2">
+<div class="loi-layout">
+
+  <div class="loi-hero">
+    <div>
+      <h1>Rev<em>LOI</em></h1>
+      <p>Offer structuring engine — three financing scenarios, live overrides &amp; professional LOI output.</p>
+    </div>
+    <button onclick="goToScreen(1)" style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;background:rgba(255,255,255,0.06);color:var(--text-tertiary);border:1px solid var(--border-subtle);padding:0.5rem 1rem;border-radius:2rem;cursor:pointer;">← Back to Underwriting</button>
+  </div>
+
+  <!-- Deal summary strip (pulled from underwriting) -->
+  <div class="deal-summary-strip">
+    <div class="ds-cell"><div class="ds-l">Property</div><div class="ds-v blue" id="loi-ds-name">—</div></div>
+    <div class="ds-cell"><div class="ds-l">Purchase Price</div><div class="ds-v green" id="loi-ds-price">—</div></div>
+    <div class="ds-cell"><div class="ds-l">Stab. NOI</div><div class="ds-v teal" id="loi-ds-noi">—</div></div>
+    <div class="ds-cell"><div class="ds-l">Total Units</div><div class="ds-v" id="loi-ds-units">—</div></div>
+    <div class="ds-cell"><div class="ds-l">Yield on Cost</div><div class="ds-v green" id="loi-ds-yoc">—</div></div>
+  </div>
+
+  <!-- OFFER INPUTS -->
+  <div class="panel" style="margin-bottom:1.25rem;">
+    <div class="panel-head accent-blue">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      <span class="panel-title blue">Global Financials &amp; Market Context</span>
+    </div>
+    <div class="panel-body">
+      <div class="fg4">
+        <div class="field"><label>Gross Income ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="loiGrossIncome" value="418379" class="has-prefix" data-type="currency" data-raw="418379" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        <div class="field"><label>Expense Ratio (%)</label><div class="input-wrap"><input type="number" id="loiExpenseRatio" value="52.5" class="has-suffix" data-type="percent" data-raw="52.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>CapEx ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="loiCapex" value="0" class="has-prefix" data-type="currency" data-raw="0" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        <div class="field"><label>Closing Costs (%)</label><div class="input-wrap"><input type="number" step="0.1" id="loiClosingCostsPct" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+      </div>
+      <div style="margin-top:0.75rem;" class="fg2" style="max-width:400px;">
+        <div class="field"><label>Market Cap Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="loiMktCap" value="10.0" class="has-suffix" data-type="percent" data-raw="10.0" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 OFFER COLUMNS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+    <div class="loi-col">
+      <div class="loi-col-title">Option 1 · Bank Loan</div>
+      <div class="fstack">
+        <div class="field"><label>Desired DSCR</label><input type="number" step="0.01" id="dscr1" value="1.3"></div>
+        <div class="fg2">
+          <div class="field"><label>Down (%)</label><input type="number" id="loiDown1" value="30"></div>
+          <div class="field"><label>Rate (%)</label><input type="number" step="0.1" id="loiRate1" value="6.7"></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Amort (Yrs)</label><input type="number" id="loiAmort1" value="25"></div>
+          <div class="field"><label>Balloon (Yrs)</label><input type="number" id="loiBalloon1" value="5"></div>
+        </div>
+      </div>
+    </div>
+    <div class="loi-col featured">
+      <div class="loi-col-title">Option 2 · Seller Financing</div>
+      <div class="fstack">
+        <div class="field"><label style="color:#34C759;">Target CoC (%)</label><input type="number" step="0.1" id="loiCoc2" value="10"></div>
+        <div class="fg2">
+          <div class="field"><label>Down (%)</label><input type="number" id="loiDown2" value="15"></div>
+          <div class="field"><label>Rate (%)</label><input type="number" step="0.1" id="loiRate2" value="5.0"></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Amort (Yrs)</label><input type="number" id="loiAmort2" value="30"></div>
+          <div class="field"><label>Balloon (Yrs)</label><input type="number" id="loiBalloon2" value="5"></div>
+        </div>
+      </div>
+    </div>
+    <div class="loi-col">
+      <div class="loi-col-title">Option 3 · SF Interest Only</div>
+      <div class="fstack">
+        <div class="field"><label style="color:#34C759;">Target CoC (%)</label><input type="number" step="0.1" id="loiCoc3" value="15"></div>
+        <div class="fg2">
+          <div class="field"><label>Down (%)</label><input type="number" id="loiDown3" value="20"></div>
+          <div class="field"><label>Rate (%)</label><input type="number" step="0.1" id="loiRate3" value="4.0"></div>
+        </div>
+        <div class="field"><label>Balloon (Yrs)</label><input type="number" id="loiBalloon3" value="5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALCULATE -->
+  <button class="btn-run" data-grad-btn style="margin-bottom:1.75rem;" onclick="calculateOffers()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+    Calculate All Offer Scenarios
+  </button>
+
+  <!-- RESULTS PANELS (hidden until calculated) -->
+  <div id="loiResultsPanel" style="display:none;">
+
+    <div class="divider"><div class="dline"></div><div class="dlabel">Offer Summaries</div><div class="dline"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.75rem;" id="loiSummaryGrid"></div>
+
+    <div class="divider"><div class="dline"></div><div class="dlabel">Seller Value Proposition</div><div class="dline"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:2rem;" id="loiSellerGrid"></div>
+
+    <!-- OVERRIDES -->
+    <div style="border-top:2px solid var(--seam);padding-top:2rem;margin-bottom:2rem;">
+      <div style="margin-bottom:1.25rem;">
+        <p style="font-family:var(--font-display);font-size:1.5rem;color:var(--text-primary);">Final Offer Overrides</p>
+        <p style="font-size:0.72rem;color:var(--text-quaternary);">Fine-tune legal terms. Changing Price auto-adjusts Down &amp; Monthly Payment.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;" id="loiOverrideGrid"></div>
+    </div>
+
+    <!-- PHASE 3 — LOI GENERATOR -->
+    <div style="border-top:2px solid var(--blue);padding-top:2rem;">
+      <p style="font-family:var(--font-display);font-size:1.5rem;color:var(--text-primary);margin-bottom:0.3rem;">LOI Generator</p>
+      <p style="font-size:0.72rem;color:var(--text-quaternary);margin-bottom:1.25rem;">Select options to include, finalize lead details &amp; generate your professional LOI.</p>
+
+      <!-- Option selection -->
+      <div class="panel" style="margin-bottom:1.25rem;">
+        <div class="panel-head"><span class="panel-title">Include in LOI Table</span></div>
+        <div class="panel-body" style="display:flex;gap:2rem;flex-wrap:wrap;">
+          <label class="chk-label"><input type="checkbox" id="loiCheck1" checked><span>Option 1 · Bank Loan</span></label>
+          <label class="chk-label"><input type="checkbox" id="loiCheck2" checked><span>Option 2 · Seller Financing</span></label>
+          <label class="chk-label"><input type="checkbox" id="loiCheck3" checked><span>Option 3 · Interest Only SF</span></label>
+        </div>
+      </div>
+
+      <!-- Lead & Property -->
+      <div class="panel" style="margin-bottom:1.25rem;">
+        <div class="panel-head"><span class="panel-title">Lead &amp; Property Details</span></div>
+        <div class="panel-body">
+          <div class="fg3">
+            <div class="field"><label>Seller Name</label><input type="text" id="loiSellerName" value="Cameron Barsanti"></div>
+            <div class="field"><label>Business Name</label><input type="text" id="loiPropName" value="Paradise Self Storage"></div>
+            <div class="field"><label>Property Address</label><input type="text" id="loiPropAddr" value="123 Main St Austin, TX 12345"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buyer Branding -->
+      <div class="buyer-panel">
+        <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:1.5rem;">
+          <div style="width:1.75rem;height:1.75rem;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#fff;">7</div>
+          <p style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:#34C759;">Buyer Branding &amp; Terms</p>
+        </div>
+        <div class="fg4" style="margin-bottom:0.85rem;">
+          <div class="field"><label>Buyer Entity</label><input type="text" id="buyerEntity" value="Rio Grande Property Buyers, LLC"></div>
+          <div class="field"><label>Street Address</label><input type="text" id="buyerAddr" value="P.O. Box 999"></div>
+          <div class="field"><label>City, State Zip</label><input type="text" id="buyerCSZ" value="Corrales, NM 87048"></div>
+          <div class="field"><label>Buyer Email</label><input type="text" id="buyerEmail" value="michael@angelscrestcapital.com"></div>
+        </div>
+        <div class="fg3" style="margin-bottom:0.85rem;">
+          <div class="field"><label>DD Period (Days)</label><input type="number" id="ddDays" value="40"></div>
+          <div class="field"><label>Finance Period (Days)</label><input type="number" id="finDays" value="60"></div>
+          <div class="field"><label>Closing Period (Days)</label><input type="number" id="closeDays" value="75"></div>
+        </div>
+        <div class="field" style="margin-bottom:0.85rem;">
+          <label>Company Logo</label>
+          <input type="file" id="logoUpload" accept="image/*" onchange="handleLogo(this)">
+        </div>
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label>Buyer Experience Intro</label>
+          <textarea id="buyerIntro" rows="3">Rio Grande Property Buyers, LLC (operating as Success Storage) is a family-owned self-storage specialist. Our team delivers proven results: Founder Todd Kruger owns more than 1,000 doors; Cameron Barsanti has acquired over $70 million in self-storage; Michael Breen has executed roughly $32,000,000 in transaction volume. We are decisive, well-capitalized, and trusted closers.</textarea>
+        </div>
+        <button class="btn-loi" data-grad-btn onclick="generateMasterLOI()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Generate Professional Master LOI
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /loiResultsPanel -->
+
+</div><!-- /loi-layout -->
+</div><!-- /screen2 -->
+
+<!-- LOI PRINT SURFACE -->
+<div id="loiOutputSection">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2.5rem;">
+    <div>
+      <p id="loiBuyerAddrOut" style="font-weight:700;"></p>
+      <p id="loiBuyerCSZOut"></p>
+      <p id="loiBuyerEmailOut" style="font-style:italic;"></p>
+      <p id="loiDateOut" style="margin-top:1rem;font-weight:600;"></p>
+    </div>
+    <div style="text-align:right;max-width:180px;">
+      <img id="loiLogoOut" src="" style="display:none;max-width:100%;height:auto;" alt="Logo">
+    </div>
+  </div>
+  <div style="border-top:2px solid #1e293b;border-bottom:2px solid #1e293b;padding:0.6rem 0;margin-bottom:1.5rem;">
+    <p style="font-weight:700;text-transform:uppercase;font-size:0.9rem;">SUBJECT: Letter of Intent to purchase <span id="loiPropNameOut"></span></p>
+    <p style="font-weight:700;">Property Address: <span id="loiPropAddrOut"></span></p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:1rem;">
+    <p>Dear <strong id="loiSellerOut"></strong>,</p>
+    <p>This Letter of Intent (LOI) sets forth the preliminary, non-binding terms under which <strong id="loiBuyerEntityOut"></strong> and/or its assigns ("Buyer") is interested in acquiring the real and all associated personal property described above ("Property") from Seller.</p>
+    <div style="margin:1.5rem 0;" id="loiTableContainer">
+      <table style="width:100%;border-collapse:collapse;" id="loiTable"></table>
+    </div>
+    <div><p style="font-weight:700;border-left:3px solid #3EAA42;padding-left:0.6rem;margin-bottom:0.25rem;">Earnest Money Deposit</p><p>Upon execution of a mutually acceptable PSA, Buyer shall deposit earnest money of 1% of Purchase Price with the title company, refundable during Inspection and Financing Periods.</p></div>
+    <div><p style="font-weight:700;border-left:3px solid #3EAA42;padding-left:0.6rem;margin-bottom:0.25rem;">Due Diligence / Inspection Period</p><p>Buyer shall have <strong id="loiDDOut"></strong> days for Inspection commencing upon receipt of all requested materials.</p></div>
+    <div><p style="font-weight:700;border-left:3px solid #3EAA42;padding-left:0.6rem;margin-bottom:0.25rem;">Financing Period</p><p>Buyer shall have <strong id="loiFinOut"></strong> days from receipt of all due diligence items to secure financing acceptable to Buyer.</p></div>
+    <div><p style="font-weight:700;border-left:3px solid #3EAA42;padding-left:0.6rem;margin-bottom:0.25rem;">Closing Date</p><p>Closing shall occur on or before <strong id="loiCloseOut"></strong> days from receipt of all due diligence items.</p></div>
+    <div style="border-top:1px solid #cbd5e1;padding-top:1.25rem;margin-top:0.5rem;">
+      <p style="font-weight:700;margin-bottom:0.4rem;">Buyer Introduction &amp; Experience</p>
+      <p style="font-style:italic;color:#475569;" id="loiIntroOut"></p>
+    </div>
+    <p>This LOI is subject to withdrawal if not accepted by Seller in writing (via email to <strong id="loiEmailSigOut"></strong>) within one (1) week from the date hereof.</p>
+    <div id="loiSelectionBoxesOut" style="border:2px solid #1e293b;padding:1rem;background:#f8fafc;margin-top:0.5rem;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;padding-top:2rem;border-top:1px solid #cbd5e1;">
+      <div>
+        <p style="font-weight:700;border-bottom:1px solid #1e293b;padding-bottom:0.25rem;">SELLER:</p>
+        <p style="margin-top:2.5rem;font-size:0.75rem;">Signature: __________________________</p>
+        <p style="margin-top:1rem;font-size:0.75rem;">Date: __________________________</p>
+      </div>
+      <div>
+        <p style="font-weight:700;border-bottom:1px solid #1e293b;padding-bottom:0.25rem;text-transform:uppercase;">BUYER: <span id="loiBuyerSigOut"></span></p>
+        <p style="margin-top:2.5rem;font-size:0.75rem;">Signature: __________________________</p>
+        <p style="margin-top:1rem;font-size:0.75rem;">Date: <span id="loiCurrentDateOut"></span></p>
+      </div>
+    </div>
+  </div>
+  <div class="no-print" style="margin-top:2.5rem;text-align:center;">
+    <button onclick="window.print()" style="background:#1e293b;color:#fff;border:none;padding:0.85rem 2rem;border-radius:0.5rem;font-weight:700;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-4H5v4a2 2 0 002 2z"/></svg>
+      Download / Print PDF
+    </button>
+  </div>
+</div>
+
+</body>
+</html>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   GLOBAL STATE
+════════════════════════════════════════════════════════════════ */
+const defaultUnits = [
+  { type:'4 x 6',   units:4,  sf:24,  stabPct:0.80, ipPsf:2.500, stPsf:2.708, climate:'Non-Climate' },
+  { type:'4 x 8',   units:2,  sf:32,  stabPct:0.80, ipPsf:2.031, stPsf:2.344, climate:'Non-Climate' },
+  { type:'6 x 6',   units:18, sf:36,  stabPct:0.80, ipPsf:1.806, stPsf:2.083, climate:'Non-Climate' },
+  { type:'6 x 8',   units:35, sf:48,  stabPct:0.80, ipPsf:1.458, stPsf:1.667, climate:'Non-Climate' },
+  { type:'6 x 10',  units:25, sf:60,  stabPct:0.80, ipPsf:1.333, stPsf:1.500, climate:'Non-Climate' },
+  { type:'6 x 12',  units:35, sf:72,  stabPct:0.80, ipPsf:1.250, stPsf:1.319, climate:'Non-Climate' },
+  { type:'6 x 16',  units:40, sf:96,  stabPct:0.80, ipPsf:0.938, stPsf:0.990, climate:'Non-Climate' },
+  { type:'8 x 12',  units:44, sf:96,  stabPct:0.80, ipPsf:1.000, stPsf:1.094, climate:'Non-Climate' },
+  { type:'8 x 14',  units:33, sf:112, stabPct:0.80, ipPsf:0.893, stPsf:1.116, climate:'Non-Climate' },
+  { type:'8 x 16',  units:39, sf:128, stabPct:0.80, ipPsf:0.992, stPsf:1.031, climate:'Non-Climate' },
+  { type:'10 x 20', units:30, sf:200, stabPct:0.80, ipPsf:0.525, stPsf:0.800, climate:'Non-Climate' },
+  { type:'RV/Boat',  units:30, sf:437, stabPct:0.95, ipPsf:0.183, stPsf:0.206, climate:'Auto/Boat' },
+];
+
+let uwResults = {};
+let loiOffers = {};
+let loiOverrides = {};
+
+/* ════════════════════════════════════════════════════════════════
+   SCREEN NAV
+════════════════════════════════════════════════════════════════ */
+function goToScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen' + n).classList.add('active');
+  document.querySelectorAll('.nav-step').forEach((s,i) => s.classList.toggle('active', i+1===n));
+  closeSuggestions();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CURRENCY / PERCENT FORMATTING
+════════════════════════════════════════════════════════════════ */
+function formatField(input) {
+  // Always parse from data-raw (set on focus/init), not from possibly-formatted value
+  const raw = parseFloat(input.dataset.raw != null ? input.dataset.raw : String(input.value).replace(/[^0-9.\-]/g,''));
+  if (isNaN(raw)) return;
+  input.dataset.raw = raw;
+  if (input.dataset.type === 'currency') {
+    input.value = '$' + raw.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  } else if (input.dataset.type === 'percent') {
+    const decimals = input.step && parseFloat(input.step) < 1 ? 2 : 1;
+    input.value = raw.toFixed(decimals) + '%';
+  }
+}
+
+function unformatField(input) {
+  // Store current numeric value in data-raw, show clean number for editing
+  const raw = input.dataset.raw != null
+    ? input.dataset.raw
+    : String(input.value).replace(/[^0-9.\-]/g, '');
+  input.dataset.raw = raw;
+  input.value = raw;
+}
+
+function getFieldVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const raw = el.dataset.raw || el.value;
+  return parseFloat(String(raw).replace(/[^0-9.\-]/g,'')) || 0;
+}
+
+function initFormatting() {
+  document.querySelectorAll('[data-type]').forEach(input => {
+    // Seed data-raw from the current numeric value before formatting
+    const raw = parseFloat(String(input.value).replace(/[^0-9.\-]/g, ''));
+    if (!isNaN(raw)) input.dataset.raw = raw;
+    formatField(input);
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MULTI-SELECT TAG SYSTEM
+════════════════════════════════════════════════════════════════ */
+const tagState = {};
+
+function toggleTagDrop(key) {
+  const drop  = document.getElementById(key + 'Drop');
+  const chips = document.getElementById(key + 'Chips');
+  const isOpen = drop.classList.contains('open');
+  // close all others first
+  document.querySelectorAll('.tag-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.tag-chips.open').forEach(c => c.classList.remove('open'));
+  if (!isOpen) { drop.classList.add('open'); chips.classList.add('open'); }
+}
+
+function toggleTag(key, value) {
+  if (!tagState[key]) tagState[key] = new Set();
+  if (tagState[key].has(value)) tagState[key].delete(value);
+  else tagState[key].add(value);
+  renderTagChips(key);
+  // update option styling
+  const drop = document.getElementById(key + 'Drop');
+  drop.querySelectorAll('.tag-option').forEach(opt => {
+    const optVal = opt.textContent.trim();
+    opt.classList.toggle('selected', tagState[key].has(optVal));
+    const icon = opt.querySelector('.chk-icon');
+    if (icon) icon.textContent = tagState[key].has(optVal) ? '✓' : '';
+  });
+}
+
+function renderTagChips(key) {
+  const chips = document.getElementById(key + 'Chips');
+  if (!tagState[key] || tagState[key].size === 0) {
+    chips.innerHTML = '<span class="tag-placeholder">Select features…</span>';
+    return;
+  }
+  let html = '';
+  tagState[key].forEach(v => {
+    html += `<span class="tag-chip">${v}<span class="rm" onclick="event.stopPropagation();toggleTag('${key}','${v}')">×</span></span>`;
+  });
+  chips.innerHTML = html;
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.tag-select-wrap')) {
+    document.querySelectorAll('.tag-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.tag-chips.open').forEach(c => c.classList.remove('open'));
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════
+   UNIT TABLE
+════════════════════════════════════════════════════════════════ */
+function buildUnitRow(i, type, sf, units, stabPct, ipPsf, stPsf, climate) {
+  const ipRentYr = Math.round(units * sf * ipPsf * 12);
+  const stRentYr = Math.round(units * sf * stPsf * 12);
+  return `
+  <tr data-row="${i}">
+    <td><input type="text" class="ut-type" value="${type}" onchange="updateUnitFooter()"></td>
+    <td><select class="ut-climate" onchange="updateUnitFooter()" style="background:var(--bg-primary);border:1px solid var(--border-subtle);color:var(--text-tertiary);border-radius:0.3rem;padding:0.2rem 0.3rem;font-size:0.65rem;width:100%;font-family:var(--font-display);">
+      <option value="Non-Climate" ${climate==='Non-Climate'?'selected':''}>Non-CC</option>
+      <option value="Climate Controlled" ${climate==='Climate Controlled'?'selected':''}>CC</option>
+      <option value="Auto/Boat" ${climate==='Auto/Boat'?'selected':''}>Auto/Boat</option>
+      <option value="Wine" ${climate==='Wine'?'selected':''}>Wine</option>
+      <option value="Office" ${climate==='Office'?'selected':''}>Office</option>
+    </select></td>
+    <td class="right"><input type="number" class="ut-units" value="${units}" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-sf" value="${sf}" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-stab" value="${(stabPct*100).toFixed(0)}" step="1" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-ippsf" value="${ipPsf.toFixed(3)}" step="0.001" onchange="updateUnitFooter()"></td>
+    <td class="right"><input type="number" class="ut-stpsf" value="${stPsf.toFixed(3)}" step="0.001" onchange="updateUnitFooter()"></td>
+    <td class="right mono" id="ut-ip-${i}">$${ipRentYr.toLocaleString()}</td>
+    <td class="right mono" id="ut-st-${i}">$${stRentYr.toLocaleString()}</td>
+    <td><button onclick="removeUnitRow(this)" style="background:none;border:none;color:var(--semantic-error);cursor:pointer;font-size:0.8rem;padding:0.2rem 0.4rem;border-radius:0.25rem;opacity:0.6;" title="Remove row">×</button></td>
+  </tr>`;
+}
+
+function initUnitTable() {
+  const tbody = document.getElementById('unitTableBody');
+  tbody.innerHTML = '';
+  defaultUnits.forEach((u, i) => {
+    tbody.innerHTML += buildUnitRow(i, u.type, u.sf, u.units, u.stabPct, u.ipPsf, u.stPsf, u.climate || 'Non-Climate');
+  });
+  updateUnitFooter();
+}
+
+function addUnitFromDropdown() {
+  const sel = document.getElementById('unitTypeSelect');
+  const [type, sfStr] = sel.value.split('|');
+  const sf = parseInt(sfStr) || 100;
+  const tbody = document.getElementById('unitTableBody');
+  const i = tbody.children.length;
+  // Estimate market rate by SF
+  const ipPsf = sf <= 25 ? 2.50 : sf <= 50 ? 1.80 : sf <= 100 ? 1.40 : sf <= 200 ? 1.00 : sf <= 300 ? 0.75 : 0.55;
+  const stPsf = ipPsf * 1.10;
+  const climate = type.includes('Wine') ? 'Wine' : type.includes('RV') || type.includes('Boat') || type.includes('Vehicle') ? 'Auto/Boat' : 'Non-Climate';
+  tbody.innerHTML += buildUnitRow(i, type, sf, 10, 0.80, ipPsf, stPsf, climate);
+  updateUnitFooter();
+}
+
+function addUnitRow() {
+  const tbody = document.getElementById('unitTableBody');
+  const i = tbody.children.length;
+  tbody.innerHTML += buildUnitRow(i, 'Custom', 100, 10, 0.80, 1.00, 1.10, 'Non-Climate');
+  updateUnitFooter();
+}
+
+function removeUnitRow(btn) {
+  const row = btn.closest('tr');
+  row.remove();
+  // Reassign row indices
+  document.querySelectorAll('#unitTableBody tr').forEach((r, idx) => {
+    r.dataset.row = idx;
+    const ipEl = r.querySelector(`[id^="ut-ip-"]`);
+    const stEl = r.querySelector(`[id^="ut-st-"]`);
+    if (ipEl) ipEl.id = 'ut-ip-' + idx;
+    if (stEl) stEl.id = 'ut-st-' + idx;
+  });
+  updateUnitFooter();
+}
+
+function getUnitData() {
+  const rows = document.querySelectorAll('#unitTableBody tr');
+  const data = [];
+  rows.forEach((row, i) => {
+    const units  = parseFloat(row.querySelector('.ut-units')?.value) || 0;
+    const sf     = parseFloat(row.querySelector('.ut-sf')?.value) || 0;
+    const stab   = (parseFloat(row.querySelector('.ut-stab')?.value) || 80) / 100;
+    const ipPsf  = parseFloat(row.querySelector('.ut-ippsf')?.value) || 0;
+    const stPsf  = parseFloat(row.querySelector('.ut-stpsf')?.value) || 0;
+    const ipRent = Math.round(units * sf * ipPsf * 12);
+    const stRent = Math.round(units * sf * stPsf * 12);
+    const ipEl = document.getElementById('ut-ip-'+i);
+    const stEl = document.getElementById('ut-st-'+i);
+    if (ipEl) ipEl.textContent = '$' + ipRent.toLocaleString();
+    if (stEl) stEl.textContent = '$' + stRent.toLocaleString();
+    data.push({ units, sf, stab, ipPsf, stPsf, ipRent, stRent });
+  });
+  return data;
+}
+
+function updateUnitFooter() {
+  const data = getUnitData();
+  const totUnits = data.reduce((s,r) => s+r.units, 0);
+  const totSF    = data.reduce((s,r) => s+r.units*r.sf, 0);
+  const totIPRent= data.reduce((s,r) => s+r.ipRent, 0);
+  const totSTRent= data.reduce((s,r) => s+r.stRent, 0);
+  const avgStab  = totUnits > 0 ? data.reduce((s,r) => s+r.stab*r.units,0)/totUnits : 0;
+  const avgIPPsf = totSF > 0 ? data.reduce((s,r) => s+r.ipPsf*r.units*r.sf,0)/totSF : 0;
+  const avgSTPsf = totSF > 0 ? data.reduce((s,r) => s+r.stPsf*r.units*r.sf,0)/totSF : 0;
+  document.getElementById('ut-tot-units').textContent = totUnits;
+  document.getElementById('ut-tot-sf').textContent    = totSF.toLocaleString();
+  document.getElementById('ut-stab-avg').textContent  = (avgStab*100).toFixed(1)+'%';
+  document.getElementById('ut-ip-psf').textContent    = '$'+avgIPPsf.toFixed(3);
+  document.getElementById('ut-st-psf').textContent    = '$'+avgSTPsf.toFixed(3);
+  document.getElementById('ut-ip-rent').textContent   = '$'+totIPRent.toLocaleString();
+  document.getElementById('ut-st-rent').textContent   = '$'+totSTRent.toLocaleString();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════════════ */
+const $ = id => {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  // Support both raw number inputs and formatted currency/percent inputs
+  const raw = el.dataset && el.dataset.raw ? el.dataset.raw : el.value;
+  return parseFloat(String(raw).replace(/[^0-9.\-]/g,'')) || 0;
+};
+const $s = id => document.getElementById(id)?.value || '';
+
+/* safeNum — strips commas/$ from any input before parseFloat */
+const safeNum = id => {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const raw = (el.dataset && el.dataset.raw) ? el.dataset.raw : el.value;
+  return parseFloat(String(raw).replace(/[^0-9.\-]/g, '')) || 0;
+};
+const curr = n => '$' + Math.round(n).toLocaleString('en-US');
+const pct  = n => (n*100).toFixed(1) + '%';
+const xMul = n => n.toFixed(2) + 'x';
+const mono = (v, c='') => `<span style="font-family:var(--font-mono);font-size:0.72rem;${c?'color:'+c:''}">${v}</span>`;
+
+function pmtCalc(loan, annualRate, amortYrs) {
+  const r = annualRate / 12;
+  const n = amortYrs * 12;
+  if (r === 0) return loan / n;
+  return loan * r / (1 - Math.pow(1+r, -n));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   UNDERWRITING ENGINE
+════════════════════════════════════════════════════════════════ */
+function runUnderwriting() {
+  const unitData    = getUnitData();
+  const totUnits    = unitData.reduce((s,r)=>s+r.units,0);
+  const purchPrice  = $('purchasePrice');
+  const closingC    = $('closingCosts');
+  const hardCosts   = $('hardCosts');
+  const softCosts   = $('softCosts');
+  const capexPU     = $('capexPerUnit');
+  const finCosts    = $('finCosts');
+  const ltcRatio    = $('ltcRatio') / 100;
+  const loanRate    = $('loanRate')  / 100;
+  const loanAmort   = $('loanAmort');
+  const ioPeriod    = $('ioPeriod');
+  const loanTerm    = $('loanTerm');
+  const exitCap     = $('exitCapRate') / 100;
+  const mktCap      = $('mktCapRate')  / 100;
+  const sellCostPct = $('sellCosts')   / 100;
+  const vacIP       = $('vacInPlace')  / 100;
+  const vacSt       = $('vacStab')     / 100;
+  const creditLoss  = $('creditLoss')  / 100;
+  const revGrowth   = $('revGrowth')   / 100;
+  const expGrowth   = $('expGrowth')   / 100;
+  const stabMonth   = $('stabMonth');
+  const analysisPd  = $('analysisPeriod');
+  const mgmtFeePct  = $('opMgmtFee')  / 100;
+  const gpSharePct  = $('gpShare')     / 100;
+  const lpSharePct  = $('lpShare')     / 100;
+
+  // Gross Rent
+  const ipGrossRent = unitData.reduce((s,r)=>s+r.ipRent, 0);
+  const stGrossRent = unitData.reduce((s,r)=>s+r.stRent, 0);
+
+  // Other income (annual)
+  const otherIncIP  = $('incSignup') + $('incAdmin') + $('incLate') + $('incUhaul');
+  const otherIncSt  = otherIncIP * 1.04; // slight stabilized bump
+
+  // Total potential income
+  const tpiIP = ipGrossRent + otherIncIP;
+  const tpiSt = stGrossRent + otherIncSt;
+
+  // Effective Gross Revenue
+  const egrIP = tpiIP * (1 - vacIP) * (1 - creditLoss);
+  const egrSt = tpiSt * (1 - vacSt) * (1 - creditLoss);
+
+  // Operating expenses
+  const opItems = [
+    { name:'Repairs & Maintenance', ipPU: $('opRepairs'), stPU: $('opRepairs') },
+    { name:'Payroll',               ipPU: $('opPayroll'), stPU: $('opPayroll') },
+    { name:'General & Admin',       ipPU: $('opGnA'),     stPU: $('opGnA') },
+    { name:'Marketing',             ipPU: $('opMarketing'),stPU:$('opMarketing') },
+    { name:'Utilities',             ipPU: $('opUtilities'),stPU:$('opUtilities') },
+    { name:'Landscaping/Snow',      ipPU: $('opLandscape'),stPU:$('opLandscape') },
+    { name:'Security',              ipPU: $('opSecurity'), stPU: $('opSecurity') },
+    { name:'Insurance',             ipPU: $('opInsurance'),stPU:$('opInsurance') },
+    { name:'Property Taxes',        ipPU: $('opTaxes'),    stPU: $('opTaxes') },
+  ];
+  const fixedOpIP = opItems.reduce((s,o)=>s+o.ipPU*totUnits, 0);
+  const fixedOpSt = opItems.reduce((s,o)=>s+o.stPU*totUnits, 0);
+  const mgmtIP    = egrIP * mgmtFeePct;
+  const mgmtSt    = egrSt * mgmtFeePct;
+  const totalOpIP = fixedOpIP + mgmtIP;
+  const totalOpSt = fixedOpSt + mgmtSt;
+
+  // NOI
+  const noiIP = egrIP - totalOpIP;
+  const noiSt = egrSt - totalOpSt;
+
+  // CapEx
+  const capexIP = capexPU * totUnits;
+  const capexSt = capexIP;
+
+  // CFO
+  const cfoIP = noiIP - capexIP;
+  const cfoSt = noiSt - capexSt;
+
+  // Total project cost
+  const totalAcqCost = purchPrice + closingC;
+  const totalProjCost = totalAcqCost + hardCosts + softCosts;
+  const totalWithFin  = totalProjCost + finCosts;
+
+  // Debt
+  const loanAmt    = totalWithFin * ltcRatio;
+  const totalEquity= totalWithFin - loanAmt;
+  const gpEquity   = totalEquity * gpSharePct;
+  const lpEquity   = totalEquity * lpSharePct;
+
+  // Monthly IO payment
+  const monthlyIO = loanAmt * (loanRate / 12);
+  const annualDS  = monthlyIO * 12;
+  // After IO, amortizing
+  const monthlyAmort = pmtCalc(loanAmt, loanRate, loanAmort);
+  const annualDSAmort = monthlyAmort * 12;
+
+  // Use IO for period, then amort
+  const dsIP = annualDS; // IO period covers our analysis
+  const dsSt = annualDS;
+
+  // DSCR
+  const dscrIP = dsIP > 0 ? (noiIP / dsIP).toFixed(2) : 'N/A';
+  const dscrSt = dsSt > 0 ? (noiSt / dsSt).toFixed(2) : 'N/A';
+
+  // CFAF
+  const cfafIP = cfoIP - dsIP;
+  const cfafSt = cfoSt - dsSt;
+
+  // Sale / Reversion
+  const saleMonth  = analysisPd;
+  // Use stabilized NOI grown to sale
+  const yearsToSale = saleMonth / 12;
+  const noiSale    = noiSt * Math.pow(1+revGrowth, yearsToSale);
+  const grossSale  = noiSale / exitCap;
+  const netSale    = grossSale * (1 - sellCostPct);
+  const equityFromSale = netSale - loanAmt;
+
+  // Returns
+  const totalCFAF  = cfafIP * (stabMonth/12) + cfafSt * ((analysisPd - stabMonth)/12);
+  const totalReturn = totalCFAF + equityFromSale;
+
+  // Yield on Cost (stabilized NOI / total project cost)
+  const yoc = noiSt / totalWithFin;
+  // CoC (stabilized)
+  const cocSt = totalEquity > 0 ? cfafSt / totalEquity : 0;
+  // EMx (approximate unlevered)
+  const unlevReturn = cfoIP*(stabMonth/12) + cfoSt*((analysisPd-stabMonth)/12) + netSale;
+  const emxUnlev = unlevReturn / totalProjCost;
+  const emxLev   = totalEquity > 0 ? (totalReturn) / totalEquity : 0;
+
+  // Simple IRR approximation (Newton's method on levered CF)
+  // Cash flows: -equity at month 0, cfafSt per year x N years, + equityFromSale at end
+  function approxIRR(equity, annualCF, saleProceed, years) {
+    let rate = 0.1;
+    for (let iter = 0; iter < 200; iter++) {
+      let npv = -equity;
+      let dnpv = 0;
+      for (let y=1; y<=years; y++) {
+        npv  += annualCF / Math.pow(1+rate, y);
+        dnpv -= y * annualCF / Math.pow(1+rate, y+1);
+      }
+      npv  += saleProceed / Math.pow(1+rate, years);
+      dnpv -= years * saleProceed / Math.pow(1+rate, years+1);
+      if (Math.abs(npv) < 0.1) break;
+      rate -= npv / dnpv;
+    }
+    return rate;
+  }
+  const irrLev = approxIRR(totalEquity, cfafSt, equityFromSale + cfafSt, analysisPd/12);
+  const irrUnlev = approxIRR(totalProjCost, cfoSt, netSale + cfoSt, analysisPd/12);
+
+  // Expense ratios
+  const expRatioIP = totalOpIP / egrIP;
+  const expRatioSt = totalOpSt / egrSt;
+
+  // Sale analysis
+  const stabValuation  = noiSt / mktCap;
+  const saleValuation  = noiSale / exitCap;
+  const devSpread      = yoc - mktCap;
+
+  // Store results globally
+  uwResults = {
+    totUnits, purchPrice, totalProjCost, totalWithFin, loanAmt,
+    gpEquity, lpEquity, totalEquity,
+    ipGrossRent, stGrossRent, otherIncIP, otherIncSt, tpiIP, tpiSt,
+    egrIP, egrSt, totalOpIP, totalOpSt, noiIP, noiSt, capexIP, capexSt,
+    cfoIP, cfoSt, dsIP, dsSt, cfafIP, cfafSt, dscrIP, dscrSt,
+    grossSale, netSale, equityFromSale, noiSale,
+    yoc, cocSt, emxUnlev, emxLev, irrLev, irrUnlev,
+    expRatioIP, expRatioSt, stabValuation, devSpread,
+    mgmtIP, mgmtSt, fixedOpIP, fixedOpSt, opItems,
+    monthlyIO, monthlyAmort, annualDS, annualDSAmort,
+  };
+
+  renderUWResults();
+
+  // Update ticker
+  document.getElementById('tk-price').textContent   = curr(purchPrice);
+  document.getElementById('tk-noi').textContent     = curr(noiSt);
+  document.getElementById('tk-yoc').textContent     = pct(yoc);
+  document.getElementById('tk-coc').textContent     = pct(cocSt);
+  document.getElementById('tk-dscr').textContent    = dscrSt;
+  const irrEl = document.getElementById('tk-irr');
+  irrEl.textContent  = pct(irrLev);
+  irrEl.className    = 'rb-value ' + (irrLev >= 0.15 ? 'green' : irrLev >= 0.08 ? 'amber' : 'red');
+  document.getElementById('resultsTicker').classList.remove('hidden');
+
+  const res = document.getElementById('uwResults');
+  if (res) {
+    res.style.display = 'block';
+    res.style.animation = 'screenIn 0.4s ease both';
+    setTimeout(() => res.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER UW RESULTS
+════════════════════════════════════════════════════════════════ */
+function renderUWResults() {
+  const r = uwResults;
+  const opItems = r.opItems;
+
+  // Pro forma table (In-Place | Stabilized | Sale)
+  const pfRows = [
+    { label:'Gross Rent', ip: r.ipGrossRent, st: r.stGrossRent, sa: Math.round(r.stGrossRent*1.04), cls:'' },
+    { label:'+ Other Income', ip: r.otherIncIP, st: r.otherIncSt, sa: Math.round(r.otherIncSt*1.04), cls:'' },
+    { label:'Total Potential Income', ip: r.tpiIP, st: r.tpiSt, sa: Math.round(r.tpiSt*1.04), cls:'subtotal' },
+    { label:'- Vacancy & Credit Loss', ip: -(r.tpiIP-r.egrIP), st: -(r.tpiSt-r.egrSt), sa: -(Math.round(r.tpiSt*1.04)-Math.round(r.egrSt*1.04)), cls:'neg' },
+    { label:'Effective Gross Revenue', ip: r.egrIP, st: r.egrSt, sa: Math.round(r.egrSt*1.04), cls:'subtotal' },
+    { label:'SECTION:Operating Expenses', ip:null, st:null, sa:null, cls:'section-head' },
+    ...opItems.map(o => ({ label: o.name, ip: o.ipPU*r.totUnits, st: o.stPU*r.totUnits, sa: o.stPU*r.totUnits*1.04, cls:'' })),
+    { label:'Management Fee', ip: r.mgmtIP, st: r.mgmtSt, sa: r.mgmtSt*1.04, cls:'' },
+    { label:'Total Operating Expenses', ip: r.totalOpIP, st: r.totalOpSt, sa: r.totalOpSt*1.04, cls:'subtotal neg' },
+    { label:'Net Operating Income', ip: r.noiIP, st: r.noiSt, sa: r.noiSale, cls:'noi' },
+    { label:'- Capital Expenditures', ip: -r.capexIP, st: -r.capexSt, sa: -r.capexSt*1.04, cls:'neg' },
+    { label:'Cash Flow from Operations', ip: r.cfoIP, st: r.cfoSt, sa: r.noiSale - r.capexSt, cls:'cfo' },
+    { label:'- Debt Service', ip: -r.dsIP, st: -r.dsSt, sa: -r.dsSt, cls:'neg' },
+    { label:'Cash Flow After Financing', ip: r.cfafIP, st: r.cfafSt, sa: r.cfoSt - r.dsIP, cls:'total' },
+  ];
+
+  let pfHtml = `<thead><tr>
+    <th style="text-align:left;">Line Item</th>
+    <th>In-Place</th><th>Stabilized</th><th>Sale (Yr ${Math.round(uwResults.totUnits>0?$('analysisPeriod')/12:2)})</th>
+  </tr></thead><tbody>`;
+  pfRows.forEach(row => {
+    if (row.cls === 'section-head') {
+      const label = row.label.replace('SECTION:','');
+      pfHtml += `<tr class="section-head"><td colspan="4">${label}</td></tr>`;
+      return;
+    }
+    const fmt = v => v === null ? '—' : (v < 0 ? '('+curr(-v)+')' : curr(v));
+    pfHtml += `<tr class="${row.cls}">
+      <td>${row.label}</td>
+      <td>${fmt(row.ip)}</td>
+      <td>${fmt(row.st)}</td>
+      <td>${fmt(row.sa)}</td>
+    </tr>`;
+  });
+  pfHtml += '</tbody>';
+  document.getElementById('proFormaTable').innerHTML = pfHtml;
+
+  // Property Returns
+  const retPropRows = [
+    ['Yield on Cost', pct(r.yoc)],
+    ['Market Cap Rate', pct($('mktCapRate')/100)],
+    ['Development Spread', (r.devSpread*10000).toFixed(1)+' bps'],
+    ['DSCR (In-Place)', r.dscrIP],
+    ['DSCR (Stabilized)', r.dscrSt],
+    ['Cash-on-Cash (Stab.)', pct(r.cocSt)],
+    ['Unlevered EMx', xMul(r.emxUnlev)],
+    ['Levered EMx', xMul(r.emxLev)],
+    ['Unlevered IRR', pct(r.irrUnlev)],
+    ['Levered IRR', pct(r.irrLev)],
+    ['Gross Sale Price', curr(r.grossSale)],
+    ['Net Sale Proceeds', curr(r.netSale)],
+  ];
+  document.getElementById('returnsProperty').innerHTML =
+    retPropRows.map(([l,v]) => `<div class="sum-row"><span class="sl">${l}</span><span class="sv">${v}</span></div>`).join('');
+
+  // Partnership Returns
+  const partRows = [
+    ['Total Project Cost', curr(r.totalWithFin)],
+    ['Senior Loan', curr(r.loanAmt)],
+    ['Total Equity', curr(r.totalEquity)],
+    ['GP Equity', curr(r.gpEquity)],
+    ['LP Equity', curr(r.lpEquity)],
+    ['GP Share', pct($('gpShare')/100)],
+    ['LP Share', pct($('lpShare')/100)],
+    ['Monthly IO Payment', curr(r.monthlyIO)],
+    ['Annual Debt Service', curr(r.annualDS)],
+    ['Equity from Sale', curr(r.equityFromSale)],
+  ];
+  document.getElementById('returnsPartnership').innerHTML =
+    partRows.map(([l,v]) => `<div class="sum-row"><span class="sl">${l}</span><span class="sv">${v}</span></div>`).join('');
+
+  // Sources & Uses
+  const suRows = [
+    ['— USES —', ''],
+    ['Acquisition Cost', curr(r.purchPrice + $('closingCosts'))],
+    ['Hard Costs', curr($('hardCosts'))],
+    ['Soft Costs', curr($('softCosts'))],
+    ['Financing Costs', curr($('finCosts'))],
+    ['Total Uses', curr(r.totalWithFin)],
+    ['— SOURCES —', ''],
+    ['Senior Loan', curr(r.loanAmt)],
+    ['GP Equity', curr(r.gpEquity)],
+    ['LP Equity', curr(r.lpEquity)],
+    ['Total Sources', curr(r.totalWithFin)],
+  ];
+  document.getElementById('sourcesUses').innerHTML =
+    suRows.map(([l,v]) => `<div class="sum-row ${l.startsWith('—')?'section-head':''}" style="${l.startsWith('—')?'font-weight:700;color:#34C759;':''}"><span class="sl">${l}</span><span class="sv">${v}</span></div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PROCEED TO LOI — populate fields from underwriting
+════════════════════════════════════════════════════════════════ */
+function proceedToLOI() {
+  const r = uwResults;
+  // Auto-populate LOI global financials from underwriting
+  document.getElementById('loiGrossIncome').value  = Math.round(r.tpiIP);
+  document.getElementById('loiExpenseRatio').value = (r.expRatioIP * 100).toFixed(1);
+  document.getElementById('loiMktCap').value        = $('mktCapRate');
+
+  // Populate deal summary strip
+  document.getElementById('loi-ds-name').textContent  = $s('propName') || '—';
+  document.getElementById('loi-ds-price').textContent = curr($('purchasePrice'));
+  document.getElementById('loi-ds-noi').textContent   = curr(r.noiSt);
+  document.getElementById('loi-ds-units').textContent = r.totUnits;
+  document.getElementById('loi-ds-yoc').textContent   = pct(r.yoc);
+
+  // Also pre-fill seller name from property name field
+  document.getElementById('loiPropName').value = $s('propName');
+  document.getElementById('loiPropAddr').value = $s('propAddress');
+
+  goToScreen(2);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   REVLOI ENGINE
+════════════════════════════════════════════════════════════════ */
+function calculateOffers() {
+  const gross     = $('loiGrossIncome');
+  const expPct    = $('loiExpenseRatio') / 100;
+  const cpx       = $('loiCapex');
+  const clPct     = $('loiClosingCostsPct') / 100;
+  const mktCapRate= $('loiMktCap') / 100;
+  const noi       = gross * (1 - expPct);
+  const impliedMV = Math.round((noi / mktCapRate) / 1000) * 1000;
+
+  function solve(id, isBank, isIO) {
+    const downPct  = ($('loiDown' + id)) / 100;
+    const rate     = ($('loiRate' + id)) / 100 / 12;
+    const annRate  = rate * 12;
+    const balloon  = $('loiBalloon' + id);
+    const amortYrs = !isIO && document.getElementById('loiAmort' + id)
+                     ? $('loiAmort' + id) : 25;
+    const rateStr  = document.getElementById('loiRate'+id)?.value || '0';
+    let price, overrideReason = '';
+
+    if (isBank) {
+      const dscr = $('dscr1');
+      const maxLoan = ((noi / dscr) / 12) * (1 - Math.pow(1+rate, -(amortYrs*12))) / rate;
+      const dscrPrice = Math.round((maxLoan - cpx) / (1 - downPct) / 1000) * 1000;
+      price = dscrPrice > impliedMV ? (overrideReason='Market Cap Override', impliedMV) : dscrPrice;
+    } else {
+      const cocT = ($('loiCoc'+id)) / 100;
+      const k = isIO ? annRate : (annRate / (1 - Math.pow(1+rate, -(amortYrs*12))));
+      const denom = (downPct + clPct) * cocT + (1 - downPct) * k;
+      price = Math.round((noi - cpx * cocT) / denom / 1000) * 1000;
+    }
+
+    const acqPrice  = isBank ? (price + cpx) : price;
+    const downAmt   = Math.round(acqPrice * downPct);
+    const loanAmt   = acqPrice - downAmt;
+    const closeAmt  = Math.round(price * clPct);
+    const dispCpx   = isBank ? 0 : cpx;
+    const totalCash = downAmt + closeAmt + dispCpx;
+
+    const mPmt = isIO
+      ? loanAmt * rate
+      : loanAmt * (rate / (1 - Math.pow(1+rate, -(amortYrs*12))));
+    const aPmt = mPmt * 12;
+    const dscr = (noi / aPmt).toFixed(2);
+    const coc  = (((noi - aPmt) / totalCash) * 100).toFixed(2);
+
+    let totalInterest = 0, balloonAmt = 0;
+    if (!isBank) {
+      if (isIO) {
+        totalInterest = Math.round(mPmt * 12 * balloon);
+        balloonAmt = loanAmt;
+      } else {
+        let bal = loanAmt, tInt = 0;
+        for (let i=0; i < balloon*12; i++) {
+          const interest = bal * rate; tInt += interest; bal -= (mPmt - interest);
+        }
+        balloonAmt = Math.round(bal); totalInterest = Math.round(tInt);
+      }
+    }
+
+    loiOffers[id] = {
+      price, acqPrice, downAmt, downPct, closeAmt, cpx: dispCpx,
+      actualCpx: cpx, totalCash, noi, aPmt: Math.round(aPmt),
+      mPmt: Math.round(mPmt), coc, dscr, balloon, amortYrs, rateStr,
+      totalInterest, balloonAmt, totalProceeds: price + totalInterest,
+      overrideReason, isBank, isIO
+    };
+  }
+
+  solve(1, true, false);
+  solve(2, false, false);
+  solve(3, false, true);
+
+  renderLoiSummaries();
+  renderLoiOverrides();
+
+  const rp = document.getElementById('loiResultsPanel');
+  if (rp) {
+    rp.style.display = 'block';
+    rp.style.animation = 'screenIn 0.4s ease both';
+    setTimeout(() => rp.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER LOI SUMMARIES
+════════════════════════════════════════════════════════════════ */
+function renderLoiSummaries() {
+  let sHtml = '', slHtml = '';
+  [1,2,3].forEach(id => {
+    const o = loiOffers[id];
+    const feat = id === 2;
+    sHtml += `
+    <div class="sum-card ${feat?'featured':''}">
+      <div style="margin-bottom:0.85rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">
+          <span style="font-size:0.52rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-quaternary);">Option ${id}</span>
+          ${o.overrideReason ? `<span class="capped-tag">Mkt Cap</span>` : ''}
+        </div>
+        <div class="sum-price">${curr(o.price)}</div>
+        <p style="font-size:0.6rem;color:var(--text-quaternary);">Purchase Price</p>
+      </div>
+      <div class="sum-row"><span class="sl">Down Payment</span><span class="sv">${curr(o.downAmt)}</span></div>
+      <div class="sum-row"><span class="sl">Closing Costs</span><span class="sv">${curr(o.closeAmt)}</span></div>
+      <div class="sum-row"><span class="sl">CapEx</span><span class="sv">${curr(o.cpx)}</span></div>
+      <div class="total-pill"><span class="tl">Total Cash</span><span class="tv">${curr(o.totalCash)}</span></div>
+      <div class="kpi-pair">
+        <div class="kpi-chip"><div class="kl">Cash on Cash</div><div class="kv">${o.coc}%</div></div>
+        <div class="kpi-chip"><div class="kl">DSCR</div><div class="kv gray">${o.dscr}</div></div>
+      </div>
+    </div>`;
+
+    const payout = id===1 ? o.price : o.totalProceeds;
+    slHtml += `
+    <div class="payout-card">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <span style="font-size:0.52rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent-green);">Logic ${id}</span>
+          <span style="font-size:0.58rem;font-weight:700;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);padding:0.2rem 0.45rem;border-radius:0.3rem;color:var(--text-quaternary);">${id===1?'Bank Exit':'Seller Yield'}</span>
+        </div>
+        <div class="sum-row"><span class="sl">Purchase Price</span><span class="sv">${curr(o.price)}</span></div>
+        <div class="sum-row"><span class="sl">Total Interest Earned</span><span class="sv" style="color:var(--semantic-success);">+${curr(o.totalInterest)}</span></div>
+        <div class="sum-row"><span class="sl">Maturity Term</span><span class="sv">${id===1?'Immediate':o.balloon+' Yrs'}</span></div>
+      </div>
+      <div style="border-top:2px solid var(--seam);padding-top:0.85rem;margin-top:0.85rem;">
+        <p style="font-size:0.5rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-quaternary);margin-bottom:0.3rem;">Total Est. Payout</p>
+        <div class="payout-num">${curr(payout)}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('loiSummaryGrid').innerHTML = sHtml;
+  document.getElementById('loiSellerGrid').innerHTML  = slHtml;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER OVERRIDES
+════════════════════════════════════════════════════════════════ */
+function renderLoiOverrides() {
+  let html = '';
+  [1,2,3].forEach(id => {
+    const o = loiOffers[id];
+    html += `
+    <div class="ov-card">
+      <p style="font-size:0.58rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-quaternary);border-bottom:1px solid var(--border-subtle);padding-bottom:0.6rem;margin-bottom:0.85rem;">Override · Option ${id}</p>
+      <div class="fstack">
+        <div class="field"><label>Final Price ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="ovPrice${id}" value="${o.price}" class="has-prefix" data-type="currency" data-raw="${o.price}" oninput="onPriceOvChange(${id})" onfocus="unformatField(this)" onblur="formatField(this)" style="font-weight:700;"></div></div>
+        <div class="fg2">
+          <div class="field"><label>Down Payment ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="ovDown${id}" value="${o.downAmt}" class="has-prefix" data-type="currency" data-raw="${o.downAmt}" oninput="recalcOv()" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Rate (%)</label><input type="number" id="ovRate${id}" value="${o.rateStr}" oninput="recalcOv()" ${o.isBank?'disabled':''}></div>
+        </div>
+        <div class="fg2">
+          <div class="field"><label>Balloon (Yrs)</label><input type="number" id="ovBalloon${id}" value="${o.balloon}" oninput="recalcOv()" ${o.isBank?'disabled':''}></div>
+          <div class="field"><label>Monthly Pmt ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="ovPmt${id}" value="${o.mPmt}" class="has-prefix" data-type="currency" data-raw="${o.mPmt}" oninput="recalcOv()" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border-subtle);padding-top:0.75rem;margin-top:0.85rem;">
+        <p style="font-size:0.52rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-quaternary);margin-bottom:0.25rem;">Seller Payout</p>
+        <div class="ov-proceeds" id="ovProceeds${id}">${curr(id===1?o.price:o.totalProceeds)}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('loiOverrideGrid').innerHTML = html;
+  recalcOv();
+}
+
+function onPriceOvChange(id) {
+  const o = loiOffers[id];
+  const el = document.getElementById('ovPrice'+id);
+  const np = parseFloat(String(el.dataset.raw || el.value).replace(/[^0-9.\-]/g,'')) || 0;
+  const basis = o.isBank ? (np + o.actualCpx) : np;
+  document.getElementById('ovDown'+id).value = Math.round(basis * o.downPct);
+  const rate = (parseFloat(document.getElementById('ovRate'+id).value)||0)/100/12;
+  const loan = basis - Math.round(basis*o.downPct);
+  let mp = 0;
+  if (o.isIO) { mp = Math.round(loan*rate); }
+  else { const m=(o.amortYrs||25)*12; if(rate>0) mp=Math.round(loan*(rate/(1-Math.pow(1+rate,-m)))); }
+  document.getElementById('ovPmt'+id).value = mp;
+  recalcOv();
+}
+
+function recalcOv() {
+  const _n = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    return parseFloat(String(el.dataset.raw || el.value).replace(/[^0-9.\-]/g,'')) || 0;
+  };
+  [1,2,3].forEach(id => {
+    const price   = _n('ovPrice'+id);
+    const down    = _n('ovDown'+id);
+    const rateV   = _n('ovRate'+id) / 100 / 12;
+    const balloon = _n('ovBalloon'+id);
+    const mPmt    = parseFloat(document.getElementById('ovPmt'+id).value)     || 0;
+    const o = loiOffers[id];
+    let proceeds = 0;
+    if (o.isBank) { proceeds = price; }
+    else if (o.isIO) { proceeds = price + mPmt*12*balloon; }
+    else {
+      let bal = price-down, tInt=0;
+      for(let i=0;i<balloon*12;i++){const int=bal*rateV;tInt+=int;bal-=(mPmt-int);}
+      proceeds = price + Math.round(tInt);
+    }
+    const el = document.getElementById('ovProceeds'+id);
+    if (el) el.textContent = curr(proceeds);
+    loiOverrides[id] = {
+      price, down, proceeds, balloon, monthlyPmt: mPmt,
+      totalInterest: proceeds - price,
+      rateStr: document.getElementById('ovRate'+id).value
+    };
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LOI GENERATION
+════════════════════════════════════════════════════════════════ */
+function handleLogo(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('loiLogoOut');
+      img.src = e.target.result; img.style.display='block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function generateMasterLOI() {
+  if (!Object.keys(loiOverrides).length) recalcOv();
+
+  const fMap = [
+    ['loiSellerName','loiSellerOut'], ['loiPropName','loiPropNameOut'],
+    ['loiPropAddr','loiPropAddrOut'], ['buyerAddr','loiBuyerAddrOut'],
+    ['buyerCSZ','loiBuyerCSZOut'],    ['buyerEmail','loiBuyerEmailOut'],
+    ['buyerEntity','loiBuyerEntityOut'],['buyerEntity','loiBuyerSigOut'],
+    ['ddDays','loiDDOut'],['finDays','loiFinOut'],['closeDays','loiCloseOut'],
+    ['buyerIntro','loiIntroOut'],['buyerEmail','loiEmailSigOut']
+  ];
+  fMap.forEach(([s,t])=>{
+    const src=document.getElementById(s), tgt=document.getElementById(t);
+    if(src&&tgt) tgt.innerText=src.value||'';
+  });
+
+  const now = new Date();
+  document.getElementById('loiDateOut').innerText = now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('loiCurrentDateOut').innerText = now.toLocaleDateString();
+
+  const activeIds = [1,2,3].filter(id=>document.getElementById('loiCheck'+id)?.checked);
+  const headers = {1:'Cash / Bank Loan', 2:'Seller Financing', 3:'SF (Interest Only)'};
+
+  // Selection boxes
+  let selHtml = '<p style="font-weight:700;font-size:0.7rem;text-transform:uppercase;color:#475569;margin-bottom:0.6rem;">Indicate chosen structure (mark with X):</p>';
+  activeIds.forEach(id=>{
+    selHtml += `
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid #e2e8f0;">
+      <div style="width:2rem;height:2rem;border:2px solid #1e293b;background:#fff;flex-shrink:0;"></div>
+      <div>
+        <p style="font-weight:700;font-size:0.8rem;">Option ${id}: ${headers[id]}</p>
+        <p style="font-size:0.65rem;color:#64748b;">Total Payout: ${curr(loiOverrides[id].proceeds)}</p>
+      </div>
+    </div>`;
+  });
+  document.getElementById('loiSelectionBoxesOut').innerHTML = selHtml;
+
+  // LOI Table
+  let tHtml = '<thead><tr><th class="loi-td" style="background:var(--accent-primary);color:#fff;text-align:left;">Key Financial Terms</th>';
+  activeIds.forEach(id=>{ tHtml+=`<th class="loi-td loi-th">${headers[id]}</th>`; });
+  tHtml += '</tr></thead><tbody>';
+
+  const rows = [
+    {label:'Purchase Price',                   key:'price',        naIf:null, raw:false, total:false},
+    {label:'Down Payment',                     key:'down',         naIf:1,    raw:false, total:false},
+    {label:'Balloon Term (Yrs)',               key:'balloon',      naIf:1,    raw:true,  total:false},
+    {label:'Monthly Payment',                  key:'monthlyPmt',   naIf:1,    raw:false, total:false},
+    {label:'Total Interest Earned by Seller',  key:'totalInterest',naIf:1,    raw:false, total:false},
+    {label:'TOTAL PAYOUT TO SELLER',           key:'proceeds',     naIf:null, raw:false, total:true },
+  ];
+  rows.forEach(row=>{
+    tHtml += `<tr ${row.total?'class="loi-tr-total"':''}><td class="loi-td" style="${row.total?'font-weight:800;':''}">${row.label}</td>`;
+    activeIds.forEach(id=>{
+      const ov = loiOverrides[id];
+      let val;
+      if(row.naIf===id){ val = row.key==='totalInterest'?'$0':'N/A'; }
+      else { val = ov?ov[row.key]:'N/A'; if(!row.raw&&val!=='N/A') val=curr(val); }
+      tHtml += `<td class="loi-td" style="text-align:center;${row.total?'font-weight:800;font-size:0.85rem;':''}">${val}</td>`;
+    });
+    tHtml += '</tr>';
+  });
+  tHtml += '</tbody>';
+  document.getElementById('loiTable').innerHTML = tHtml;
+
+  const out = document.getElementById('loiOutputSection');
+  if (out) {
+    out.style.display = 'block';
+    setTimeout(() => out.scrollIntoView({behavior:'smooth', block:'start'}), 150);
+  }
+}
+
+
+
+
+/* ════════════════════════════════════════════════════════════════
+   MAP ENGINE — Leaflet + OSM + Overpass API
+════════════════════════════════════════════════════════════════ */
+let mapInstance   = null;
+let subjectMarker = null;
+let poiLayer      = null;
+let subjectLatLng = null;
+let addressTimer  = null;
+
+const STORAGE_ICON_RED  = createStorageIcon('#FF453A');
+const STORAGE_ICON_BLUE = createStorageIcon('#0A84FF');
+const SUBJECT_ICON      = createSubjectIcon();
+
+function createStorageIcon(color) {
+  if (typeof L === 'undefined') return null;
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:24px;height:24px;background:${color};border:2px solid rgba(255,255,255,0.9);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -26],
+  });
+}
+
+function createSubjectIcon() {
+  if (typeof L === 'undefined') return null;
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:30px;height:30px;background:#3EAA42;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(62,170,66,0.4),0 4px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
+  });
+}
+
+function initMap(lat, lng) {
+  const container = document.getElementById('mapContainer');
+
+  // Show container FIRST so Leaflet has real dimensions to render into
+  container.classList.add('visible');
+
+  const doInit = () => {
+    if (!mapInstance) {
+      mapInstance = L.map('propertyMap', { zoomControl: true, scrollWheelZoom: true });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(mapInstance);
+      poiLayer = L.layerGroup().addTo(mapInstance);
+    }
+    // Critical: force Leaflet to recalculate size after display:none → flex
+    mapInstance.invalidateSize();
+    mapInstance.setView([lat, lng], 13);
+
+    if (subjectMarker) subjectMarker.remove();
+    const icon = createSubjectIcon();
+    subjectMarker = L.marker([lat, lng], { icon })
+      .addTo(mapInstance)
+      .bindPopup(`<div class="poi-popup"><div class="poi-name">Subject Property</div><div class="poi-addr">${document.getElementById('propAddress').value}</div></div>`);
+
+    subjectLatLng = [lat, lng];
+    const radius = parseFloat(document.getElementById('mapRadius').value) || 3;
+    queryNearbyStorage(lat, lng, radius);
+  };
+
+  // Use rAF to ensure container is painted before Leaflet measures it
+  requestAnimationFrame(() => requestAnimationFrame(doInit));
+}
+
+/* ── Address Autocomplete Engine ── */
+let _addrTimer   = null;
+let _addrResults = [];
+let _addrIdx     = -1;
+
+function onAddressInput(val) {
+  clearTimeout(_addrTimer);
+  closeSuggestions();
+  if (!val || val.length < 3) return;
+  showSpinner(true);
+  _addrTimer = setTimeout(() => fetchSuggestions(val), 400);
+}
+
+function showSpinner(show) {
+  const el = document.getElementById('addrSpinner');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+async function fetchSuggestions(query) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q=${encodeURIComponent(query)}`;
+    const res  = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'StorageIQ/1.0' } });
+    const data = await res.json();
+    showSpinner(false);
+    if (data && data.length > 0) {
+      _addrResults = data;
+      renderSuggestions(data);
+    } else {
+      closeSuggestions();
+    }
+  } catch(e) {
+    showSpinner(false);
+    console.warn('Nominatim error', e);
+  }
+}
+
+function renderSuggestions(results) {
+  const box = document.getElementById('addrSuggestions');
+  if (!box) return;
+  _addrIdx = -1;
+
+  box.innerHTML = results.map((r, i) => {
+    // Build a clean display name
+    const a    = r.address || {};
+    const main = r.namedetails?.name || a.road || r.display_name.split(',')[0];
+    const sub  = [a.city || a.town || a.village, a.state, a.country_code?.toUpperCase()].filter(Boolean).join(', ');
+    const type = r.type || r.class || '';
+    const icon = type.includes('storage') || r.display_name.toLowerCase().includes('storage')
+      ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>`
+      : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-quaternary)" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 7 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg>`;
+    return `<div class="addr-suggestion" data-idx="${i}"
+      onmousedown="selectSuggestion(${i})"
+      onmouseover="highlightSugg(${i})">
+      <div style="margin-top:2px;flex-shrink:0;">${icon}</div>
+      <div>
+        <div class="as-main">${main}</div>
+        <div class="as-sub">${sub}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.style.display = 'block';
+}
+
+function highlightSugg(idx) {
+  _addrIdx = idx;
+  document.querySelectorAll('.addr-suggestion').forEach((el, i) => {
+    el.classList.toggle('highlighted', i === idx);
+  });
+}
+
+function selectSuggestion(idx) {
+  const r = _addrResults[idx];
+  if (!r) return;
+
+  // Set the input value to the full display name
+  const input = document.getElementById('propAddress');
+  if (input) {
+    input.value = r.display_name;
+    // Also update City,State field if we can
+    const a = r.address || {};
+    const cityEl = document.getElementById('propLocation');
+    if (cityEl) {
+      const city  = a.city || a.town || a.village || '';
+      const state = a.state || a.country || '';
+      if (city || state) cityEl.value = [city, state].filter(Boolean).join(', ');
+    }
+  }
+
+  closeSuggestions();
+  initMap(parseFloat(r.lat), parseFloat(r.lon));
+}
+
+function closeSuggestions() {
+  const box = document.getElementById('addrSuggestions');
+  if (box) box.style.display = 'none';
+  _addrIdx = -1;
+}
+
+function onAddrKeydown(e) {
+  const items = document.querySelectorAll('.addr-suggestion');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _addrIdx = Math.min(_addrIdx + 1, items.length - 1);
+    highlightSugg(_addrIdx);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _addrIdx = Math.max(_addrIdx - 1, 0);
+    highlightSugg(_addrIdx);
+  } else if (e.key === 'Enter' && _addrIdx >= 0) {
+    e.preventDefault();
+    selectSuggestion(_addrIdx);
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#addrWrap')) closeSuggestions();
+});
+
+async function geocodeAddress(address) {
+  // Used for initial load geocode only (no suggestions UI)
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+    if (data && data.length > 0) initMap(parseFloat(data[0].lat), parseFloat(data[0].lon));
+  } catch(e) { console.warn('Geocode error', e); }
+}
+
+function onRadiusChange(val) {
+  document.getElementById('mapRadiusVal').textContent = val + ' mi';
+  if (subjectLatLng) {
+    queryNearbyStorage(subjectLatLng[0], subjectLatLng[1], parseFloat(val));
+  }
+}
+
+async function queryNearbyStorage(lat, lng, radiusMiles) {
+  const radiusM = radiusMiles * 1609.34;
+  document.getElementById('mapPoiCount').textContent = 'Loading…';
+  poiLayer.clearLayers();
+
+  // Draw radius circle
+  const existing = mapInstance._layers;
+  Object.values(existing).forEach(l => { if (l instanceof L.Circle) l.remove(); });
+  L.circle([lat, lng], {
+    radius: radiusM,
+    color: 'rgba(62,170,66,0.5)',
+    fillColor: 'rgba(62,170,66,0.05)',
+    fillOpacity: 1,
+    weight: 1.5,
+    dashArray: '5,5'
+  }).addTo(mapInstance);
+
+  try {
+    const query = `[out:json][timeout:20];
+(
+  node["shop"="storage"](around:${Math.round(radiusM)},${lat},${lng});
+  way["shop"="storage"](around:${Math.round(radiusM)},${lat},${lng});
+  node["self_storage"](around:${Math.round(radiusM)},${lat},${lng});
+  node["amenity"="storage_rental"](around:${Math.round(radiusM)},${lat},${lng});
+  node["name"~"storage|Storage|Self Storage|Mini Storage",i](around:${Math.round(radiusM)},${lat},${lng});
+);
+out center;`;
+
+    const res  = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+    const data = await res.json();
+    const elements = data.elements || [];
+    let count = 0;
+
+    elements.forEach(el => {
+      const elLat = el.lat || el.center?.lat;
+      const elLng = el.lon || el.center?.lon;
+      if (!elLat || !elLng) return;
+
+      const name = el.tags?.name || el.tags?.['brand'] || 'Self-Storage Facility';
+      const addr = [el.tags?.['addr:housenumber'], el.tags?.['addr:street'], el.tags?.['addr:city']]
+        .filter(Boolean).join(' ') || 'Address not listed';
+
+      const dist = haversineDistance(lat, lng, elLat, elLng);
+      const distStr = dist < 1 ? (dist * 5280).toFixed(0) + ' ft' : dist.toFixed(2) + ' mi';
+      const isNamed = name !== 'Self-Storage Facility';
+      const icon = createStorageIcon(isNamed ? '#FF453A' : '#0A84FF');
+
+      const marker = L.marker([elLat, elLng], { icon }).addTo(poiLayer);
+      marker.bindPopup(`
+        <div class="poi-popup">
+          <div class="poi-name">${name}</div>
+          <div class="poi-addr">${addr}</div>
+          <div class="poi-dist">${distStr} from subject</div>
+          <button class="poi-comp-btn" onclick="useAsComp('${name.replace(/'/g,"\'")}', ${dist.toFixed(3)})">Use as Comp →</button>
+        </div>
+      `);
+      count++;
+    });
+
+    document.getElementById('mapPoiCount').textContent = count + ' storage facilit' + (count === 1 ? 'y' : 'ies') + ' found';
+  } catch(e) {
+    console.warn('Overpass error', e);
+    document.getElementById('mapPoiCount').textContent = 'POI query failed — try again';
+  }
+}
+
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 3958.8; // miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function useAsComp(name, dist) {
+  // Add a blank row to unit mix pre-tagged with comp name and estimated psf based on distance
+  const tbody = document.getElementById('unitTableBody');
+  const i = tbody.children.length;
+  const estPsf = Math.max(0.80, 1.40 - dist * 0.05).toFixed(3);
+  tbody.innerHTML += buildUnitRow(i, `COMP: ${name}`, 100, 0, 0.80, parseFloat(estPsf), parseFloat(estPsf), 'Non-Climate');
+  updateUnitFooter();
+  // Scroll to unit table
+  document.getElementById('unitTable').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PARCYL v2 THEME ENGINE
+   Mirrors useTheme() / darkTheme / lightTheme from src/theme.js
+════════════════════════════════════════════════════════════════ */
+const darkTheme = {
+  bg: {
+    primary:   "#1C1C1E",
+    secondary: "#2C2C2E",
+    tertiary:  "#3A3A3C",
+    elevated:  "#48484A",
+  },
+  accent: {
+    primary:       "#3EAA42",
+    primaryHover:  "#359438",
+    primaryMuted:  "rgba(62, 170, 66, 0.12)",
+    primaryBorder: "rgba(62, 170, 66, 0.30)",
+    green:         "#34C759",
+    greenHover:    "#2DB84E",
+    greenMuted:    "rgba(52, 199, 89, 0.12)",
+  },
+  text: {
+    primary:    "rgba(255, 255, 255, 1.0)",
+    secondary:  "rgba(255, 255, 255, 0.80)",
+    tertiary:   "rgba(255, 255, 255, 0.55)",
+    quaternary: "rgba(255, 255, 255, 0.35)",
+  },
+  border: {
+    subtle:  "rgba(255, 255, 255, 0.08)",
+    default: "rgba(255, 255, 255, 0.12)",
+    strong:  "rgba(255, 255, 255, 0.20)",
+  },
+  semantic: {
+    success: "#34C759",
+    warning: "#FFD60A",
+    error:   "#FF453A",
+    info:    "#0A84FF",
+  },
+  charts: {
+    traffic:  ["#34C759", "#FFD60A", "#FF9F0A", "#FF453A"],
+    spectrum: ["#5AC8FA", "#0A84FF", "#BF5AF2", "#FF375F"],
+    neon:     ["#34C759", "#FFD60A", "#FF6961", "var(--semantic-info)", "#BF5AF2", "#0A84FF"],
+  },
+  font: {
+    display: "-apple-system, BlinkMacSystemFont, \'SF Pro Display\', \'Segoe UI\', Roboto, sans-serif",
+    mono:    "\'JetBrains Mono\', monospace",
+  },
+};
+
+const lightTheme = {
+  bg: {
+    primary:   "#FFFFFF",
+    secondary: "#F2F2F7",
+    tertiary:  "#E5E5EA",
+    elevated:  "#D1D1D6",
+  },
+  accent: {
+    primary:       "#2D8F32",
+    primaryHover:  "#267D2B",
+    primaryMuted:  "rgba(45, 143, 50, 0.08)",
+    primaryBorder: "rgba(45, 143, 50, 0.20)",
+    green:         "#28A745",
+    greenHover:    "#218838",
+    greenMuted:    "rgba(40, 167, 69, 0.08)",
+  },
+  text: {
+    primary:    "rgba(0, 0, 0, 0.92)",
+    secondary:  "rgba(0, 0, 0, 0.75)",
+    tertiary:   "rgba(0, 0, 0, 0.55)",
+    quaternary: "rgba(0, 0, 0, 0.35)",
+  },
+  border: {
+    subtle:  "rgba(0, 0, 0, 0.06)",
+    default: "rgba(0, 0, 0, 0.10)",
+    strong:  "rgba(0, 0, 0, 0.18)",
+  },
+  semantic: {
+    success: "#28A745",
+    warning: "#F5A623",
+    error:   "#DC3545",
+    info:    "#007AFF",
+  },
+  charts: {
+    traffic:  ["#28A745", "#F5A623", "#E8772E", "#DC3545"],
+    spectrum: ["#32ADE6", "#007AFF", "#AF52DE", "#E8375F"],
+    neon:     ["#28A745", "#F5A623", "#E8575A", "var(--semantic-info)", "#AF52DE", "#007AFF"],
+  },
+  font: {
+    display: "-apple-system, BlinkMacSystemFont, \'SF Pro Display\', \'Segoe UI\', Roboto, sans-serif",
+    mono:    "\'JetBrains Mono\', monospace",
+  },
+};
+
+/* ── applyTheme: writes every Parcyl token as a CSS variable ── */
+function applyTheme(t) {
+  const r = document.documentElement.style;
+
+  // Backgrounds
+  r.setProperty("--bg-primary",   t.bg.primary);
+  r.setProperty("--bg-secondary", t.bg.secondary);
+  r.setProperty("--bg-tertiary",  t.bg.tertiary);
+  r.setProperty("--bg-elevated",  t.bg.elevated);
+
+  // Accent
+  r.setProperty("--accent-primary",       t.accent.primary);
+  r.setProperty("--accent-primaryHover",  t.accent.primaryHover);
+  r.setProperty("--accent-primaryMuted",  t.accent.primaryMuted);
+  r.setProperty("--accent-primaryBorder", t.accent.primaryBorder);
+  r.setProperty("--accent-green",         t.accent.green);
+  r.setProperty("--accent-greenMuted",    t.accent.greenMuted);
+
+  // Text
+  r.setProperty("--text-primary",    t.text.primary);
+  r.setProperty("--text-secondary",  t.text.secondary);
+  r.setProperty("--text-tertiary",   t.text.tertiary);
+  r.setProperty("--text-quaternary", t.text.quaternary);
+
+  // Borders
+  r.setProperty("--border-subtle",  t.border.subtle);
+  r.setProperty("--border-default", t.border.default);
+  r.setProperty("--border-strong",  t.border.strong);
+
+  // Semantic
+  r.setProperty("--semantic-success", t.semantic.success);
+  r.setProperty("--semantic-warning", t.semantic.warning);
+  r.setProperty("--semantic-error",   t.semantic.error);
+  r.setProperty("--semantic-info",    t.semantic.info);
+
+  // Legacy aliases keep working via CSS var() chaining in :root
+  // Gradient helpers for buttons (can't be CSS vars, so we patch inline)
+  document.querySelectorAll("[data-grad-btn]").forEach(el => {
+    el.style.background = `linear-gradient(135deg, ${t.accent.primaryHover}, ${t.accent.primary})`;
+  });
+
+  // Nav icon glow
+  const navIcon = document.querySelector(".nav-icon");
+  if (navIcon) {
+    navIcon.style.background = `linear-gradient(135deg, ${t.accent.primaryHover}, ${t.accent.primary})`;
+    navIcon.style.boxShadow  = `0 0 16px ${t.accent.primaryMuted}`;
+  }
+
+  // Topnav bg
+  const nav = document.querySelector(".topnav");
+  if (nav) {
+    const isDark = (t === darkTheme);
+    nav.style.background = isDark
+      ? "rgba(28,28,30,0.92)"
+      : "rgba(255,255,255,0.92)";
+    nav.style.borderBottomColor = t.border.subtle;
+  }
+
+  // Theme toggle button itself
+  const toggleBtn = document.getElementById("themeToggleBtn");
+  if (toggleBtn) {
+    toggleBtn.style.background   = t.bg.secondary;
+    toggleBtn.style.borderColor  = t.border.default;
+    toggleBtn.style.color        = t.text.secondary;
+  }
+
+  // Store on html element for CSS selectors if needed
+  document.documentElement.setAttribute("data-theme", t === darkTheme ? "dark" : "light");
+}
+
+/* ── useTheme state ── */
+let _currentMode = "dark";
+
+function getTheme() {
+  return _currentMode === "dark" ? darkTheme : lightTheme;
+}
+
+function isDark() { return _currentMode === "dark"; }
+
+/* ── toggleAppTheme — called by nav button ── */
+function toggleAppTheme() {
+  _currentMode = _currentMode === "dark" ? "light" : "dark";
+  const t = getTheme();
+  applyTheme(t);
+  updateToggleBtn();
+  try { localStorage.setItem("parcyl-theme", _currentMode); } catch {}
+}
+
+function updateToggleBtn() {
+  const icon  = document.getElementById("themeIcon");
+  const label = document.getElementById("themeLabel");
+  if (!icon || !label) return;
+  if (_currentMode === "dark") {
+    label.textContent = "Light";
+    lucide.createIcons({ icons: {}, attrs: {} });   // re-render
+    icon.setAttribute("data-lucide", "sun");
+  } else {
+    label.textContent = "Dark";
+    icon.setAttribute("data-lucide", "moon");
+  }
+  // Re-render Lucide icons
+  if (window.lucide) lucide.createIcons();
+}
+
+/* ── Init on DOMContentLoaded ── */
+document.addEventListener("DOMContentLoaded", () => {
+  // Restore persisted preference
+  try {
+    const saved = localStorage.getItem("parcyl-theme");
+    if (saved === "light" || saved === "dark") _currentMode = saved;
+  } catch {}
+
+  // Apply theme tokens
+  applyTheme(getTheme());
+  updateToggleBtn();
+
+  // Render Lucide icons
+  if (window.lucide) lucide.createIcons();
+
+  // Init unit table
+  initUnitTable();
+
+  // Format all currency/percent inputs on load
+  initFormatting();
+
+  // Silently geocode the pre-filled address on load
+  const addr = document.getElementById('propAddress');
+  if (addr && addr.value.length > 5) {
+    setTimeout(() => geocodeAddress(addr.value), 800);
+  }
+});
+
+</script>

@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env / secrets (for when we add backend)
+.env
+.env.local
+.env.*
+
+# Dependencies (for when we add a build step)
+node_modules/
+
+# Netlify
+.netlify/
