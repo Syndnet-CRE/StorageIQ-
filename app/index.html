@@ -216,6 +216,9 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 /* Hero banner */
@@ -306,6 +309,11 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 0.875rem;
+  overflow: visible; /* was hidden — clipped dropdowns/suggestions */
+}
+/* Keep the visual clipping only on the panel chrome, not the body */
+.panel-head {
+  border-radius: 0.875rem 0.875rem 0 0;
   overflow: hidden;
 }
 .panel-head {
@@ -354,6 +362,24 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   transition: border-color 0.15s, box-shadow 0.15s;
   -moz-appearance:textfield;
 }
+.field select {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+body.light .field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+.field select option {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
 .field input::-webkit-outer-spin-button,
 .field input::-webkit-inner-spin-button { -webkit-appearance:none; }
 .field input:focus,
@@ -363,7 +389,6 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(62,170,66,0.12);
 }
-.field select { cursor:pointer; }
 .field textarea { resize:vertical; line-height:1.5; font-family:var(--font-display); }
 .field input:disabled { opacity:0.35; cursor:not-allowed; }
 
@@ -371,6 +396,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
 .fg2 { display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; }
 .fg3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.65rem; }
 .fg4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0.65rem; }
+.fg6 { display:grid; grid-template-columns:repeat(6,1fr); gap:0.65rem; }
 .fstack { display:flex; flex-direction:column; gap:0.65rem; }
 
 /* Unit table */
@@ -552,26 +578,159 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
 .wf-table tr.tier td { background:rgba(62,170,66,0.04); }
 .wf-table tr.total td { background:var(--accent-primaryMuted); color:var(--text-primary); font-weight:700; }
 
-/* SWOT */
-.swot-grid {
-  display:grid; grid-template-columns:1fr 1fr;
-  gap:0.75rem;
+/* ── Competition Map — full-width panel ── */
+.map-placeholder-full {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--border-subtle);
 }
-.swot-q {
-  border-radius:0.5rem;
-  padding:0.75rem;
-  font-size:0.72rem;
+.map-placeholder-full:hover { background: var(--accent-primaryMuted); }
+.map-placeholder-full:hover .mph-cta {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
 }
-.swot-q .swot-label {
-  font-size:0.55rem; font-weight:800; letter-spacing:0.12em; text-transform:uppercase;
-  margin-bottom:0.4rem;
+.mph-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-quaternary);
+  text-align: center;
+  max-width: 320px;
 }
-.swot-q ul { padding-left:1rem; display:flex; flex-direction:column; gap:0.2rem; }
-.swot-q li { color:var(--text-tertiary); }
-.swot-s { background:var(--accent-greenMuted); border:1px solid var(--accent-primaryBorder); }
-.swot-s .swot-label { color:var(--semantic-success); }
-.swot-w { background:rgba(var(--semantic-error-rgb, 255,69,58),0.08); border:1px solid rgba(255,69,58,0.2); }
-.swot-w .swot-label { color:var(--semantic-error); }
+.mph-inner svg { opacity: 0.45; }
+.mph-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  margin-top: 0.25rem;
+}
+.mph-sub {
+  font-size: 0.65rem;
+  color: var(--text-quaternary);
+  font-family: var(--font-display);
+  line-height: 1.5;
+}
+.mph-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  background: var(--accent-primaryMuted);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-primaryBorder);
+  border-radius: 2rem;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+}
+/* Map container inside full-width panel */
+#mapContainer.map-container {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-top: 0;
+  box-shadow: none;
+}
+#mapContainer #propertyMap { height: 440px; }
+
+/* Comp cards section */
+.comp-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.75rem;
+}
+.comp-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.65rem;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.comp-card:hover {
+  border-color: var(--border-default);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.comp-card-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  padding-right: 1.2rem;
+  line-height: 1.3;
+}
+.comp-card-dist {
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+.comp-card-meta {
+  font-size: 0.6rem;
+  color: var(--text-quaternary);
+  font-family: var(--font-display);
+  line-height: 1.4;
+}
+.comp-card-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0.15rem 0;
+}
+.comp-card-psf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.1rem;
+}
+.comp-card-psf-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  font-family: var(--font-display);
+}
+.comp-card-psf-val {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.comp-card-remove {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.1s, color 0.1s;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.comp-card-remove:hover { background: rgba(255,69,58,0.12); color: var(--semantic-error); }
+
 
 /* Divider */
 .divider {
@@ -821,11 +980,12 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   .panel-grid,.panel-grid.three { grid-template-columns:1fr; }
   .results-bar { grid-template-columns:repeat(3,1fr); }
   .deal-summary-strip { grid-template-columns:repeat(3,1fr); }
+  .fg6 { grid-template-columns:repeat(3,1fr); }
 }
 @media(max-width:600px) {
-  .fg2,.fg3,.fg4 { grid-template-columns:1fr; }
+  .fg2,.fg3,.fg4,.fg6 { grid-template-columns:1fr 1fr; }
   .results-bar { grid-template-columns:repeat(2,1fr); }
-  .swot-grid { grid-template-columns:1fr; }
+  .comp-cards-grid { grid-template-columns:1fr 1fr; }
 }
 
 /* ── Currency / Percentage Input Wrappers ── */
@@ -956,10 +1116,18 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
   border-radius: 0.45rem;
-  padding: 0.45rem 0.65rem;
+  padding: 0.45rem 2rem 0.45rem 0.65rem;
   font-size: 0.75rem;
   font-family: var(--font-display);
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+body.light .unit-add-bar select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 .unit-add-bar select:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-primaryMuted); }
 .btn-add-unit {
@@ -981,17 +1149,18 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
 
 /* ── Map container ── */
 .map-container {
-  margin-top: 0.75rem;
-  border-radius: 0.6rem;
+  margin-top: 1rem;
+  border-radius: 0.75rem;
   overflow: hidden;
   border: 1px solid var(--border-default);
   display: none;
   flex-direction: column;
   transition: all 0.3s;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
 }
 .map-container.visible { display: flex; }
 #propertyMap {
-  height: 280px;
+  height: 360px;
   width: 100%;
   background: var(--bg-tertiary);
 }
@@ -999,8 +1168,8 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-tertiary);
+  padding: 0.6rem 1rem;
+  background: var(--bg-elevated);
   border-top: 1px solid var(--border-subtle);
   flex-wrap: wrap;
 }
@@ -1023,43 +1192,72 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--accent-green);
-  min-width: 2rem;
+  min-width: 2.5rem;
 }
 .map-poi-count {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 600;
   color: var(--text-tertiary);
   margin-left: auto;
+  font-family: var(--font-display);
 }
 .map-legend {
   display: flex;
-  gap: 1rem;
-  padding: 0.4rem 0.75rem;
+  gap: 1.25rem;
+  padding: 0.45rem 1rem;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-subtle);
   flex-wrap: wrap;
+  align-items: center;
 }
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.58rem;
+  gap: 0.35rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: var(--text-tertiary);
+  letter-spacing: 0.04em;
 }
 .legend-dot {
-  width: 0.55rem;
-  height: 0.55rem;
+  width: 0.6rem;
+  height: 0.6rem;
   border-radius: 50%;
   flex-shrink: 0;
 }
+.legend-dot.subject  { background: var(--accent-primary); }
+.legend-dot.compete  { background: var(--semantic-error); }
+.legend-dot.other    { background: var(--semantic-info); }
+
+/* Map placeholder — shown before address is entered */
+.map-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2rem;
+  margin-top: 1rem;
+  border: 1px dashed var(--border-default);
+  border-radius: 0.75rem;
+  color: var(--text-quaternary);
+  font-size: 0.72rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.map-placeholder:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-green);
+}
+.map-placeholder svg { opacity: 0.5; }
 
 /* ── Address Autocomplete Suggestions ── */
 .addr-suggestion {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
   cursor: pointer;
   border-bottom: 1px solid var(--border-subtle);
   transition: background 0.1s;
@@ -1068,16 +1266,48 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
 .addr-suggestion:last-child { border-bottom: none; }
 .addr-suggestion:hover,
 .addr-suggestion.highlighted { background: var(--accent-primaryMuted); }
+.addr-suggestion .as-icon {
+  margin-top: 1px;
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 0.3rem;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .addr-suggestion .as-main {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;
 }
 .addr-suggestion .as-sub {
-  font-size: 0.62rem;
+  font-size: 0.63rem;
   color: var(--text-quaternary);
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
+  font-weight: 500;
+}
+.addr-suggestion .as-type {
+  display: inline-block;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.2rem;
+  margin-top: 0.2rem;
+  background: var(--bg-tertiary);
+  color: var(--text-quaternary);
+}
+/* No-results hint */
+.addr-no-results {
+  padding: 0.75rem 0.85rem;
+  font-size: 0.72rem;
+  color: var(--text-quaternary);
+  font-family: var(--font-display);
+  text-align: center;
 }
 
 /* ── Row spacing fix (Unit Mix → Income/Expenses) ── */
@@ -1197,196 +1427,240 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
     <div class="rb-cell"><div class="rb-label">Levered IRR</div><div class="rb-value" id="tk-irr">—</div></div>
   </div>
 
-  <!-- ROW 1: Property Info + SWOT -->
-  <div class="panel-grid">
+  <!-- ROW 1: Property Details (full-width) -->
+  <div class="panel">
+    <div class="panel-head accent-blue">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      <span class="panel-title blue">Property Details</span>
+    </div>
+    <div class="panel-body fstack">
 
-    <!-- Property Details -->
-    <div class="panel">
-      <div class="panel-head accent-blue">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-        <span class="panel-title blue">Property Details</span>
+      <!-- Row A: Identity -->
+      <div class="fg4">
+        <div class="field"><label>Property Name</label><input type="text" id="propName" value="Security Mini Storage #2"></div>
+        <div class="field"><label>City, State</label><input type="text" id="propLocation" value="Marion, Arkansas"></div>
+        <div class="field">
+          <label>Address</label>
+          <div style="position:relative;" id="addrWrap">
+            <input type="text" id="propAddress" value="4900 I-55, Marion, AR"
+              autocomplete="off"
+              oninput="onAddressInput(this.value)"
+              onfocus="onAddressFocus(this.value)"
+              onkeydown="onAddrKeydown(event)"
+              placeholder="Start typing an address…"
+              style="padding-right:2rem;">
+            <div id="addrSpinner" style="display:none;position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);width:14px;height:14px;border:2px solid var(--border-default);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+            <div id="addrSuggestions" style="
+              display:none;
+              position:absolute;
+              top:calc(100% + 4px);
+              left:0;right:0;
+              background:var(--bg-secondary);
+              border:1px solid var(--accent-primary);
+              border-radius:0.5rem;
+              z-index:500;
+              box-shadow:0 8px 32px rgba(0,0,0,0.4);
+              max-height:220px;
+              overflow-y:auto;
+            "></div>
+          </div>
+        </div>
+        <div class="field"><label>Investment Type</label>
+          <select id="investType">
+            <option value="Value-Add" selected>Value-Add</option>
+            <option value="Core">Core</option>
+            <option value="Core-Plus">Core-Plus</option>
+            <option value="Development">Development</option>
+          </select>
+        </div>
       </div>
-      <div class="panel-body fstack">
-        <div class="fg2">
-          <div class="field"><label>Property Name</label><input type="text" id="propName" value="Security Mini Storage #2"></div>
-          <div class="field"><label>City, State</label><input type="text" id="propLocation" value="Marion, Arkansas"></div>
+
+      <!-- Row B: Physical stats -->
+      <div class="fg6">
+        <div class="field"><label>Total Units</label><input type="number" id="totalUnits" value="335"></div>
+        <div class="field"><label>Net Rent. SF</label><input type="number" id="totalSF" value="42370"></div>
+        <div class="field"><label>Buildings</label><input type="number" id="numBuildings" value="8"></div>
+        <div class="field"><label>Year Built</label><input type="number" id="yearBuilt" value="2009"></div>
+        <div class="field"><label>Management Type</label>
+          <select id="mgmtType">
+            <option value="3rd Party Management" selected>3rd Party Management</option>
+            <option value="Self-Managed">Self-Managed</option>
+          </select>
         </div>
-        <div class="fg2">
-          <div class="field">
-            <label>Address</label>
-            <div style="position:relative;" id="addrWrap">
-              <input type="text" id="propAddress" value="4900 I-55, Marion, AR"
-                autocomplete="off"
-                oninput="onAddressInput(this.value)"
-                onfocus="onAddressInput(this.value)"
-                onkeydown="onAddrKeydown(event)"
-                placeholder="Start typing an address…"
-                style="padding-right:2rem;">
-              <div id="addrSpinner" style="display:none;position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);width:14px;height:14px;border:2px solid var(--border-default);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
-              <div id="addrSuggestions" style="
-                display:none;
-                position:absolute;
-                top:calc(100% + 4px);
-                left:0;right:0;
-                background:var(--bg-secondary);
-                border:1px solid var(--accent-primary);
-                border-radius:0.5rem;
-                z-index:500;
-                box-shadow:0 8px 32px rgba(0,0,0,0.4);
-                max-height:220px;
-                overflow-y:auto;
-              "></div>
+        <div class="field"><label>Analysis Period (Mo)</label><input type="number" id="analysisPeriod" value="24"></div>
+      </div>
+
+      <!-- Row C: Classification -->
+      <div class="fg6">
+        <div class="field">
+          <label>Climate Control</label>
+          <select id="climateType">
+            <option value="">Select…</option>
+            <option value="Non-Climate Controlled" selected>Non-Climate Controlled</option>
+            <option value="Climate Controlled">Climate Controlled</option>
+            <option value="Mixed (Climate + Non-Climate)">Mixed (Climate + Non-Climate)</option>
+            <option value="Wine Storage">Wine Storage</option>
+            <option value="Temperature Controlled Only">Temperature Controlled Only</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Access Type</label>
+          <select id="accessType">
+            <option value="">Select…</option>
+            <option value="Drive-Up" selected>Drive-Up</option>
+            <option value="Indoor Corridor">Indoor Corridor</option>
+            <option value="Outdoor">Outdoor</option>
+            <option value="Covered">Covered</option>
+            <option value="Mixed Access">Mixed Access</option>
+            <option value="Boat / RV Storage">Boat / RV Storage</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Zoning Type</label>
+          <select id="zoningType">
+            <option value="">Select…</option>
+            <option value="C-1 (Neighborhood Commercial)">C-1 (Neighborhood Commercial)</option>
+            <option value="C-2 (Community Commercial)">C-2 (Community Commercial)</option>
+            <option value="C-3 (General Commercial)">C-3 (General Commercial)</option>
+            <option value="I-1 (Light Industrial)">I-1 (Light Industrial)</option>
+            <option value="I-2 (Heavy Industrial)">I-2 (Heavy Industrial)</option>
+            <option value="Mixed-Use">Mixed-Use</option>
+            <option value="B-1 (Business)">B-1 (Business)</option>
+            <option value="Other / Unknown">Other / Unknown</option>
+          </select>
+        </div>
+        <div class="field"><label>Stories / Height</label>
+          <select id="heightType">
+            <option value="1-Story" selected>1-Story</option>
+            <option value="2-Story">2-Story</option>
+            <option value="3-Story">3-Story</option>
+            <option value="4+ Story">4+ Story</option>
+            <option value="Mixed Height">Mixed Height</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Security Features</label>
+          <div class="tag-select-wrap" id="securityWrap">
+            <div class="tag-chips" id="securityChips" onclick="toggleTagDrop('security')">
+              <span class="tag-placeholder">Select features…</span>
             </div>
-          </div>
-          <div class="field"><label>Investment Type</label>
-            <select id="investType">
-              <option value="Value-Add" selected>Value-Add</option>
-              <option value="Core">Core</option>
-              <option value="Core-Plus">Core-Plus</option>
-              <option value="Development">Development</option>
-            </select>
-          </div>
-        </div>
-        <div class="fg4">
-          <div class="field"><label>Total Units</label><input type="number" id="totalUnits" value="335"></div>
-          <div class="field"><label>Net Rent. SF</label><input type="number" id="totalSF" value="42370"></div>
-          <div class="field"><label>Buildings</label><input type="number" id="numBuildings" value="8"></div>
-          <div class="field"><label>Year Built</label><input type="number" id="yearBuilt" value="2009"></div>
-        </div>
-        <div class="fg2">
-          <div class="field"><label>Management Type</label>
-            <select id="mgmtType">
-              <option value="3rd Party Management" selected>3rd Party Management</option>
-              <option value="Self-Managed">Self-Managed</option>
-            </select>
-          </div>
-          <div class="field"><label>Analysis Period (Mo)</label><input type="number" id="analysisPeriod" value="24"></div>
-        </div>
-        <!-- NEW: Climate & Access -->
-        <div class="fg2">
-          <div class="field">
-            <label>Climate Control</label>
-            <select id="climateType">
-              <option value="">Select…</option>
-              <option value="Non-Climate Controlled" selected>Non-Climate Controlled</option>
-              <option value="Climate Controlled">Climate Controlled</option>
-              <option value="Mixed (Climate + Non-Climate)">Mixed (Climate + Non-Climate)</option>
-              <option value="Wine Storage">Wine Storage</option>
-              <option value="Temperature Controlled Only">Temperature Controlled Only</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Access Type</label>
-            <select id="accessType">
-              <option value="">Select…</option>
-              <option value="Drive-Up" selected>Drive-Up</option>
-              <option value="Indoor Corridor">Indoor Corridor</option>
-              <option value="Outdoor">Outdoor</option>
-              <option value="Covered">Covered</option>
-              <option value="Mixed Access">Mixed Access</option>
-              <option value="Boat / RV Storage">Boat / RV Storage</option>
-            </select>
-          </div>
-        </div>
-        <!-- NEW: Security & Amenities multi-select -->
-        <div class="fg2">
-          <div class="field">
-            <label>Security Features</label>
-            <div class="tag-select-wrap" id="securityWrap">
-              <div class="tag-chips" id="securityChips" onclick="toggleTagDrop('security')">
-                <span class="tag-placeholder">Select features…</span>
-              </div>
-              <div class="tag-dropdown" id="securityDrop">
-                <div class="tag-option" onclick="toggleTag('security','Gated Access')"><span class="chk-icon"></span>Gated Access</div>
-                <div class="tag-option" onclick="toggleTag('security','24/7 Cameras')"><span class="chk-icon"></span>24/7 Cameras</div>
-                <div class="tag-option" onclick="toggleTag('security','Keypad Entry')"><span class="chk-icon"></span>Keypad Entry</div>
-                <div class="tag-option" onclick="toggleTag('security','On-Site Manager')"><span class="chk-icon"></span>On-Site Manager</div>
-                <div class="tag-option" onclick="toggleTag('security','Motion Sensors')"><span class="chk-icon"></span>Motion Sensors</div>
-                <div class="tag-option" onclick="toggleTag('security','Individual Door Alarms')"><span class="chk-icon"></span>Individual Door Alarms</div>
-                <div class="tag-option" onclick="toggleTag('security','Perimeter Fencing')"><span class="chk-icon"></span>Perimeter Fencing</div>
-              </div>
-            </div>
-          </div>
-          <div class="field">
-            <label>Amenities</label>
-            <div class="tag-select-wrap" id="amenitiesWrap">
-              <div class="tag-chips" id="amenitiesChips" onclick="toggleTagDrop('amenities')">
-                <span class="tag-placeholder">Select amenities…</span>
-              </div>
-              <div class="tag-dropdown" id="amenitiesDrop">
-                <div class="tag-option" onclick="toggleTag('amenities','U-Haul Vendor')"><span class="chk-icon"></span>U-Haul Vendor</div>
-                <div class="tag-option" onclick="toggleTag('amenities','Moving Supplies')"><span class="chk-icon"></span>Moving Supplies</div>
-                <div class="tag-option" onclick="toggleTag('amenities','Online Rental')"><span class="chk-icon"></span>Online Rental</div>
-                <div class="tag-option" onclick="toggleTag('amenities','Auto-Pay')"><span class="chk-icon"></span>Auto-Pay</div>
-                <div class="tag-option" onclick="toggleTag('amenities','Packing Supplies')"><span class="chk-icon"></span>Packing Supplies</div>
-                <div class="tag-option" onclick="toggleTag('amenities','Climate Zones')"><span class="chk-icon"></span>Climate Zones</div>
-                <div class="tag-option" onclick="toggleTag('amenities','Freight Elevator')"><span class="chk-icon"></span>Freight Elevator</div>
-              </div>
+            <div class="tag-dropdown" id="securityDrop">
+              <div class="tag-option" onclick="toggleTag('security','Gated Access')"><span class="chk-icon"></span>Gated Access</div>
+              <div class="tag-option" onclick="toggleTag('security','24/7 Cameras')"><span class="chk-icon"></span>24/7 Cameras</div>
+              <div class="tag-option" onclick="toggleTag('security','Keypad Entry')"><span class="chk-icon"></span>Keypad Entry</div>
+              <div class="tag-option" onclick="toggleTag('security','On-Site Manager')"><span class="chk-icon"></span>On-Site Manager</div>
+              <div class="tag-option" onclick="toggleTag('security','Motion Sensors')"><span class="chk-icon"></span>Motion Sensors</div>
+              <div class="tag-option" onclick="toggleTag('security','Individual Door Alarms')"><span class="chk-icon"></span>Individual Door Alarms</div>
+              <div class="tag-option" onclick="toggleTag('security','Perimeter Fencing')"><span class="chk-icon"></span>Perimeter Fencing</div>
             </div>
           </div>
         </div>
-        <!-- NEW: Zoning -->
-        <div class="fg2">
-          <div class="field">
-            <label>Zoning Type</label>
-            <select id="zoningType">
-              <option value="">Select…</option>
-              <option value="C-1 (Neighborhood Commercial)">C-1 (Neighborhood Commercial)</option>
-              <option value="C-2 (Community Commercial)">C-2 (Community Commercial)</option>
-              <option value="C-3 (General Commercial)">C-3 (General Commercial)</option>
-              <option value="I-1 (Light Industrial)">I-1 (Light Industrial)</option>
-              <option value="I-2 (Heavy Industrial)">I-2 (Heavy Industrial)</option>
-              <option value="Mixed-Use">Mixed-Use</option>
-              <option value="B-1 (Business)">B-1 (Business)</option>
-              <option value="Other / Unknown">Other / Unknown</option>
-            </select>
-          </div>
-          <div class="field"><label>Stories / Height</label>
-            <select id="heightType">
-              <option value="1-Story" selected>1-Story</option>
-              <option value="2-Story">2-Story</option>
-              <option value="3-Story">3-Story</option>
-              <option value="4+ Story">4+ Story</option>
-              <option value="Mixed Height">Mixed Height</option>
-            </select>
+        <div class="field">
+          <label>Amenities</label>
+          <div class="tag-select-wrap" id="amenitiesWrap">
+            <div class="tag-chips" id="amenitiesChips" onclick="toggleTagDrop('amenities')">
+              <span class="tag-placeholder">Select amenities…</span>
+            </div>
+            <div class="tag-dropdown" id="amenitiesDrop">
+              <div class="tag-option" onclick="toggleTag('amenities','U-Haul Vendor')"><span class="chk-icon"></span>U-Haul Vendor</div>
+              <div class="tag-option" onclick="toggleTag('amenities','Moving Supplies')"><span class="chk-icon"></span>Moving Supplies</div>
+              <div class="tag-option" onclick="toggleTag('amenities','Online Rental')"><span class="chk-icon"></span>Online Rental</div>
+              <div class="tag-option" onclick="toggleTag('amenities','Auto-Pay')"><span class="chk-icon"></span>Auto-Pay</div>
+              <div class="tag-option" onclick="toggleTag('amenities','Packing Supplies')"><span class="chk-icon"></span>Packing Supplies</div>
+              <div class="tag-option" onclick="toggleTag('amenities','Climate Zones')"><span class="chk-icon"></span>Climate Zones</div>
+              <div class="tag-option" onclick="toggleTag('amenities','Freight Elevator')"><span class="chk-icon"></span>Freight Elevator</div>
+            </div>
           </div>
         </div>
-        <!-- MAP -->
-        <div class="map-container" id="mapContainer">
-          <div id="propertyMap"></div>
-          <div class="map-toolbar">
-            <span class="mt-label">Search Radius</span>
-            <input type="range" id="mapRadius" min="1" max="10" value="3" step="0.5" oninput="onRadiusChange(this.value)">
-            <span class="mt-val" id="mapRadiusVal">3 mi</span>
-            <span class="map-poi-count" id="mapPoiCount"></span>
-          </div>
-          <div class="map-legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#3EAA42;"></div>Subject Property</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#FF453A;"></div>Competing Storage</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#0A84FF;"></div>Other Storage</div>
-          </div>
-        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ROW 1B: Competition Map (full-width) -->
+  <div class="panel">
+    <div class="panel-head accent-teal">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--semantic-info)" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 7 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg>
+      <span class="panel-title teal">Competition Map</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem;">
+        <span class="map-poi-count" id="mapPoiCount"></span>
+        <button onclick="triggerGeocode()" id="mapRefreshBtn" style="
+          display:none;
+          align-items:center;gap:0.35rem;
+          background:var(--bg-tertiary);
+          border:1px solid var(--border-default);
+          color:var(--text-tertiary);
+          border-radius:0.4rem;
+          padding:0.3rem 0.65rem;
+          font-size:0.6rem;
+          font-weight:700;
+          letter-spacing:0.08em;
+          text-transform:uppercase;
+          cursor:pointer;
+          font-family:var(--font-display);
+          transition:all 0.15s;
+        " onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-green)'"
+           onmouseout="this.style.borderColor='var(--border-default)';this.style.color='var(--text-tertiary)'">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
       </div>
     </div>
+    <div class="panel-body" style="padding:0;">
 
-    <!-- SWOT -->
-    <div class="panel">
-      <div class="panel-head accent-teal">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--semantic-info)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
-        <span class="panel-title teal">Deal Notes (SWOT)</span>
-      </div>
-      <div class="panel-body">
-        <div class="swot-grid">
-          <div class="swot-q swot-s">
-            <div class="swot-label">Strengths</div>
-            <textarea id="swotS" rows="3" style="width:100%;background:transparent;border:none;color:var(--text-tertiary);font-size:0.7rem;resize:none;font-family:var(--font-display);">Located on I-55&#10;Variety of unit sizes&#10;Established business&#10;U-Haul vendor, 4.0/5 star reviews</textarea>
-          </div>
-          <div class="swot-q swot-w">
-            <div class="swot-label">Weaknesses</div>
-            <textarea id="swotW" rows="3" style="width:100%;background:transparent;border:none;color:var(--text-tertiary);font-size:0.7rem;resize:none;font-family:var(--font-display);">Curb appeal&#10;Potential competition&#10;Lack of online presence&#10;Non-climate controlled</textarea>
+      <!-- Map placeholder -->
+      <div id="mapPlaceholder" class="map-placeholder-full" onclick="triggerGeocode()">
+        <div class="mph-inner">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 7 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg>
+          <div class="mph-title">Load Competition Map</div>
+          <div class="mph-sub">Finds self-storage facilities within your search radius — enter an address above first</div>
+          <div class="mph-cta">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search Competitors
           </div>
         </div>
       </div>
+
+      <!-- Live map -->
+      <div class="map-container" id="mapContainer">
+        <div id="propertyMap"></div>
+        <div class="map-toolbar">
+          <span class="mt-label">Search Radius</span>
+          <input type="range" id="mapRadius" min="1" max="10" value="3" step="0.5" oninput="onRadiusChange(this.value)">
+          <span class="mt-val" id="mapRadiusVal">3 mi</span>
+        </div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot subject"></div>Subject Property</div>
+          <div class="legend-item"><div class="legend-dot compete"></div>Named Competitor</div>
+          <div class="legend-item"><div class="legend-dot other"></div>Other Storage</div>
+        </div>
+      </div>
+
+      <!-- Comp cards grid — populated by useAsComp() -->
+      <div id="compCardsSection" style="display:none; padding:1rem 1.25rem 1.25rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+          <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-quaternary);">Added Comps</div>
+          <button onclick="clearAllComps()" style="
+            background:transparent;
+            border:1px solid var(--border-subtle);
+            color:var(--text-quaternary);
+            border-radius:0.35rem;
+            padding:0.2rem 0.55rem;
+            font-size:0.58rem;
+            font-weight:700;
+            letter-spacing:0.08em;
+            text-transform:uppercase;
+            cursor:pointer;
+            font-family:var(--font-display);
+            transition:all 0.15s;
+          " onmouseover="this.style.borderColor='var(--semantic-error)';this.style.color='var(--semantic-error)'"
+             onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-quaternary)'">
+            Clear All
+          </button>
+        </div>
+        <div id="compCardsGrid" class="comp-cards-grid"></div>
+      </div>
+
     </div>
   </div>
 
@@ -1401,16 +1675,16 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
       </div>
       <div class="panel-body fstack">
         <div class="fg2">
-          <div class="field"><label>Purchase Price ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="purchasePrice" value="2000000" class="has-prefix" data-type="currency" data-raw="2000000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Closing Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="closingCosts" value="20000" class="has-prefix" data-type="currency" data-raw="20000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Purchase Price ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="purchasePrice" value="2000000" class="has-prefix" data-type="currency" data-raw="2000000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Closing Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="closingCosts" value="20000" class="has-prefix" data-type="currency" data-raw="20000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Hard Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="hardCosts" value="500000" class="has-prefix" data-type="currency" data-raw="500000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Soft Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="softCosts" value="27500" class="has-prefix" data-type="currency" data-raw="27500" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Hard Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="hardCosts" value="500000" class="has-prefix" data-type="currency" data-raw="500000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Soft Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="softCosts" value="27500" class="has-prefix" data-type="currency" data-raw="27500" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>CapEx Reserve ($/unit/yr)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="capexPerUnit" value="25" class="has-prefix" data-type="currency" data-raw="25" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Financing Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="finCosts" value="44000" class="has-prefix" data-type="currency" data-raw="44000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>CapEx Reserve ($/unit/yr)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="capexPerUnit" value="25" class="has-prefix" data-type="currency" data-raw="25" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Financing Costs ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="finCosts" value="44000" class="has-prefix" data-type="currency" data-raw="44000" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
       </div>
     </div>
@@ -1423,18 +1697,18 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
       </div>
       <div class="panel-body fstack">
         <div class="fg3">
-          <div class="field"><label>LTC Ratio (%)</label><div class="input-wrap"><input type="number" step="0.1" id="ltcRatio" value="65" class="has-suffix" data-type="percent" data-raw="65" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-          <div class="field"><label>Interest Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="loanRate" value="6.5" class="has-suffix" data-type="percent" data-raw="6.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>LTC Ratio (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="ltcRatio" value="65" class="has-suffix" data-type="percent" data-raw="65" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Interest Rate (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="loanRate" value="6.5" class="has-suffix" data-type="percent" data-raw="6.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
           <div class="field"><label>Amort (Yrs)</label><input type="number" id="loanAmort" value="30"></div>
         </div>
         <div class="fg3">
           <div class="field"><label>IO Period (Mo)</label><input type="number" id="ioPeriod" value="48"></div>
           <div class="field"><label>Loan Term (Mo)</label><input type="number" id="loanTerm" value="48"></div>
-          <div class="field"><label>Exit Cap Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="exitCapRate" value="10.5" class="has-suffix" data-type="percent" data-raw="10.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Exit Cap Rate (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="exitCapRate" value="10.5" class="has-suffix" data-type="percent" data-raw="10.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Market Cap Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="mktCapRate" value="10.0" class="has-suffix" data-type="percent" data-raw="10.0" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-          <div class="field"><label>Selling Costs (%)</label><div class="input-wrap"><input type="number" step="0.1" id="sellCosts" value="1.5" class="has-suffix" data-type="percent" data-raw="1.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Market Cap Rate (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="mktCapRate" value="10.0" class="has-suffix" data-type="percent" data-raw="10.0" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Selling Costs (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="sellCosts" value="1.5" class="has-suffix" data-type="percent" data-raw="1.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
         </div>
       </div>
     </div>
@@ -1527,7 +1801,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   </div>
 
   <!-- ROW 4: Income & Expenses -->
-  <div class="panel-grid section-gap">
+  <div class="panel-grid">
 
     <!-- Vacancy & Other Income -->
     <div class="panel">
@@ -1537,21 +1811,21 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
       </div>
       <div class="panel-body fstack">
         <div class="fg2">
-          <div class="field"><label>General Vacancy In-Place (%)</label><div class="input-wrap"><input type="number" step="0.1" id="vacInPlace" value="20" class="has-suffix" data-type="percent" data-raw="20" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-          <div class="field"><label>General Vacancy Stabilized (%)</label><div class="input-wrap"><input type="number" step="0.1" id="vacStab" value="10" class="has-suffix" data-type="percent" data-raw="10" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>General Vacancy In-Place (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="vacInPlace" value="20" class="has-suffix" data-type="percent" data-raw="20" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>General Vacancy Stabilized (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="vacStab" value="10" class="has-suffix" data-type="percent" data-raw="10" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Credit Loss (%)</label><div class="input-wrap"><input type="number" step="0.1" id="creditLoss" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-          <div class="field"><label>Revenue Growth Rate (%/yr)</label><div class="input-wrap"><input type="number" step="0.1" id="revGrowth" value="2" class="has-suffix" data-type="percent" data-raw="2" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Credit Loss (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="creditLoss" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Revenue Growth Rate (%/yr)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="revGrowth" value="2" class="has-suffix" data-type="percent" data-raw="2" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
         </div>
         <div class="divider"><div class="dline"></div><div class="dlabel">Other Income (Annual)</div><div class="dline"></div></div>
         <div class="fg2">
-          <div class="field"><label>Signup Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incSignup" value="20760" class="has-prefix" data-type="currency" data-raw="20760" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Admin Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incAdmin" value="11483" class="has-prefix" data-type="currency" data-raw="11483" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Signup Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="incSignup" value="20760" class="has-prefix" data-type="currency" data-raw="20760" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Admin Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="incAdmin" value="11483" class="has-prefix" data-type="currency" data-raw="11483" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Late Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incLate" value="3092" class="has-prefix" data-type="currency" data-raw="3092" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>U-Haul / Other ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="incUhaul" value="3866" class="has-prefix" data-type="currency" data-raw="3866" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Late Fees ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="incLate" value="3092" class="has-prefix" data-type="currency" data-raw="3092" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>U-Haul / Other ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="incUhaul" value="3866" class="has-prefix" data-type="currency" data-raw="3866" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
       </div>
     </div>
@@ -1564,27 +1838,27 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
       </div>
       <div class="panel-body fstack">
         <div class="fg2">
-          <div class="field"><label>Repairs &amp; Maintenance</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opRepairs" value="50" class="has-prefix" data-type="currency" data-raw="50" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Payroll</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opPayroll" value="100" class="has-prefix" data-type="currency" data-raw="100" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Repairs &amp; Maintenance</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opRepairs" value="50" class="has-prefix" data-type="currency" data-raw="50" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Payroll</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opPayroll" value="100" class="has-prefix" data-type="currency" data-raw="100" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>General &amp; Administrative</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opGnA" value="75" class="has-prefix" data-type="currency" data-raw="75" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Marketing</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opMarketing" value="50" class="has-prefix" data-type="currency" data-raw="50" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>General &amp; Administrative</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opGnA" value="75" class="has-prefix" data-type="currency" data-raw="75" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Marketing</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opMarketing" value="50" class="has-prefix" data-type="currency" data-raw="50" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Utilities</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opUtilities" value="35" class="has-prefix" data-type="currency" data-raw="35" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Landscaping / Snow</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opLandscape" value="15" class="has-prefix" data-type="currency" data-raw="15" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Utilities</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opUtilities" value="35" class="has-prefix" data-type="currency" data-raw="35" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Landscaping / Snow</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opLandscape" value="15" class="has-prefix" data-type="currency" data-raw="15" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Security</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opSecurity" value="12" class="has-prefix" data-type="currency" data-raw="12" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Insurance</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opInsurance" value="30" class="has-prefix" data-type="currency" data-raw="30" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Security</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opSecurity" value="12" class="has-prefix" data-type="currency" data-raw="12" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Insurance</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opInsurance" value="30" class="has-prefix" data-type="currency" data-raw="30" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Property Taxes</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="opTaxes" value="150" class="has-prefix" data-type="currency" data-raw="150" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-          <div class="field"><label>Mgmt Fee (% of EGR)</label><div class="input-wrap"><input type="number" step="0.1" id="opMgmtFee" value="5" class="has-suffix" data-type="percent" data-raw="5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Property Taxes</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="opTaxes" value="150" class="has-prefix" data-type="currency" data-raw="150" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Mgmt Fee (% of EGR)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="opMgmtFee" value="5" class="has-suffix" data-type="percent" data-raw="5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
         </div>
         <div class="fg2">
-          <div class="field"><label>Expense Growth Rate (%/yr)</label><div class="input-wrap"><input type="number" step="0.1" id="expGrowth" value="2" class="has-suffix" data-type="percent" data-raw="2" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Expense Growth Rate (%/yr)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="expGrowth" value="2" class="has-suffix" data-type="percent" data-raw="2" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
           <div class="field"><label>Stabilization Month</label><input type="number" id="stabMonth" value="12"></div>
         </div>
       </div>
@@ -1599,10 +1873,10 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
     </div>
     <div class="panel-body">
       <div class="fg4" style="margin-bottom:1rem;">
-        <div class="field"><label>GP Equity Share (%)</label><div class="input-wrap"><input type="number" step="0.1" id="gpShare" value="5" class="has-suffix" data-type="percent" data-raw="5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-        <div class="field"><label>LP Equity Share (%)</label><div class="input-wrap"><input type="number" step="0.1" id="lpShare" value="95" class="has-suffix" data-type="percent" data-raw="95" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-        <div class="field"><label>Acq. Fee (% of LP Eq.)</label><div class="input-wrap"><input type="number" step="0.1" id="acqFee" value="0.5" class="has-suffix" data-type="percent" data-raw="0.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-        <div class="field"><label>Disp. Fee (%)</label><div class="input-wrap"><input type="number" step="0.1" id="dispFee" value="0.5" class="has-suffix" data-type="percent" data-raw="0.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>GP Equity Share (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="gpShare" value="5" class="has-suffix" data-type="percent" data-raw="5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>LP Equity Share (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="lpShare" value="95" class="has-suffix" data-type="percent" data-raw="95" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Acq. Fee (% of LP Eq.)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="acqFee" value="0.5" class="has-suffix" data-type="percent" data-raw="0.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Disp. Fee (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="dispFee" value="0.5" class="has-suffix" data-type="percent" data-raw="0.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
       </div>
       <div style="overflow-x:auto;">
         <table class="wf-table" id="waterfallTable">
@@ -1624,7 +1898,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   </div>
 
   <!-- CALCULATE BUTTON -->
-  <div style="margin-top:1.5rem;">
+  <div>
     <button class="btn-run" data-grad-btn onclick="runUnderwriting()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
       Run Full Underwriting Analysis
@@ -1704,13 +1978,13 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
     </div>
     <div class="panel-body">
       <div class="fg4">
-        <div class="field"><label>Gross Income ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="loiGrossIncome" value="418379" class="has-prefix" data-type="currency" data-raw="418379" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-        <div class="field"><label>Expense Ratio (%)</label><div class="input-wrap"><input type="number" id="loiExpenseRatio" value="52.5" class="has-suffix" data-type="percent" data-raw="52.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
-        <div class="field"><label>CapEx ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="loiCapex" value="0" class="has-prefix" data-type="currency" data-raw="0" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
-        <div class="field"><label>Closing Costs (%)</label><div class="input-wrap"><input type="number" step="0.1" id="loiClosingCostsPct" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Gross Income ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="loiGrossIncome" value="418379" class="has-prefix" data-type="currency" data-raw="418379" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        <div class="field"><label>Expense Ratio (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" id="loiExpenseRatio" value="52.5" class="has-suffix" data-type="percent" data-raw="52.5" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>CapEx ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="loiCapex" value="0" class="has-prefix" data-type="currency" data-raw="0" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+        <div class="field"><label>Closing Costs (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="loiClosingCostsPct" value="1" class="has-suffix" data-type="percent" data-raw="1" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
       </div>
       <div style="margin-top:0.75rem;" class="fg2" style="max-width:400px;">
-        <div class="field"><label>Market Cap Rate (%)</label><div class="input-wrap"><input type="number" step="0.1" id="loiMktCap" value="10.0" class="has-suffix" data-type="percent" data-raw="10.0" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
+        <div class="field"><label>Market Cap Rate (%)</label><div class="input-wrap"><input type="text" inputmode="decimal" step="0.1" id="loiMktCap" value="10.0" class="has-suffix" data-type="percent" data-raw="10.0" onfocus="unformatField(this)" onblur="formatField(this)"><span class="suffix">%</span></div></div>
       </div>
     </div>
   </div>
@@ -1940,10 +2214,13 @@ function goToScreen(n) {
    CURRENCY / PERCENT FORMATTING
 ════════════════════════════════════════════════════════════════ */
 function formatField(input) {
-  // Always parse from data-raw (set on focus/init), not from possibly-formatted value
-  const raw = parseFloat(input.dataset.raw != null ? input.dataset.raw : String(input.value).replace(/[^0-9.\-]/g,''));
-  if (isNaN(raw)) return;
-  input.dataset.raw = raw;
+  // Parse from data-raw if set and non-empty, otherwise strip formatting from current value
+  const rawSrc = (input.dataset.raw != null && input.dataset.raw !== '')
+    ? input.dataset.raw
+    : String(input.value).replace(/[^0-9.\-]/g, '');
+  const raw = parseFloat(rawSrc);
+  if (isNaN(raw)) { input.dataset.raw = ''; return; }
+  input.dataset.raw = String(raw);
   if (input.dataset.type === 'currency') {
     input.value = '$' + raw.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   } else if (input.dataset.type === 'percent') {
@@ -1953,12 +2230,17 @@ function formatField(input) {
 }
 
 function unformatField(input) {
-  // Store current numeric value in data-raw, show clean number for editing
-  const raw = input.dataset.raw != null
-    ? input.dataset.raw
-    : String(input.value).replace(/[^0-9.\-]/g, '');
+  // On focus: strip any formatting so user can edit the raw number
+  // Always re-derive from the visible value in case the user navigated away and back
+  // without a blur (e.g., tab sequence reset). Prefer data-raw only if it's consistent.
+  const displayed = String(input.value).replace(/[^0-9.\-]/g, '');
+  const fromRaw   = input.dataset.raw || '';
+  // Use data-raw if it matches what's visually displayed (modulo formatting), else re-parse display
+  const raw = fromRaw !== '' ? fromRaw : displayed;
   input.dataset.raw = raw;
   input.value = raw;
+  // Select all for easy overtyping
+  input.select && input.select();
 }
 
 function getFieldVal(id) {
@@ -2009,8 +2291,13 @@ function toggleTag(key, value) {
 
 function renderTagChips(key) {
   const chips = document.getElementById(key + 'Chips');
+  if (!chips) return;
+  const placeholders = {
+    security:  'Select features…',
+    amenities: 'Select amenities…',
+  };
   if (!tagState[key] || tagState[key].size === 0) {
-    chips.innerHTML = '<span class="tag-placeholder">Select features…</span>';
+    chips.innerHTML = `<span class="tag-placeholder">${placeholders[key] || 'Select…'}</span>`;
     return;
   }
   let html = '';
@@ -2632,14 +2919,14 @@ function renderLoiOverrides() {
     <div class="ov-card">
       <p style="font-size:0.58rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-quaternary);border-bottom:1px solid var(--border-subtle);padding-bottom:0.6rem;margin-bottom:0.85rem;">Override · Option ${id}</p>
       <div class="fstack">
-        <div class="field"><label>Final Price ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="ovPrice${id}" value="${o.price}" class="has-prefix" data-type="currency" data-raw="${o.price}" oninput="onPriceOvChange(${id})" onfocus="unformatField(this)" onblur="formatField(this)" style="font-weight:700;"></div></div>
+        <div class="field"><label>Final Price ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="ovPrice${id}" value="${o.price}" class="has-prefix" data-type="currency" data-raw="${o.price}" oninput="onPriceOvChange(${id})" onfocus="unformatField(this)" onblur="formatField(this)" style="font-weight:700;"></div></div>
         <div class="fg2">
-          <div class="field"><label>Down Payment ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="ovDown${id}" value="${o.downAmt}" class="has-prefix" data-type="currency" data-raw="${o.downAmt}" oninput="recalcOv()" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Down Payment ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="ovDown${id}" value="${o.downAmt}" class="has-prefix" data-type="currency" data-raw="${o.downAmt}" oninput="recalcOv()" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
           <div class="field"><label>Rate (%)</label><input type="number" id="ovRate${id}" value="${o.rateStr}" oninput="recalcOv()" ${o.isBank?'disabled':''}></div>
         </div>
         <div class="fg2">
           <div class="field"><label>Balloon (Yrs)</label><input type="number" id="ovBalloon${id}" value="${o.balloon}" oninput="recalcOv()" ${o.isBank?'disabled':''}></div>
-          <div class="field"><label>Monthly Pmt ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="number" id="ovPmt${id}" value="${o.mPmt}" class="has-prefix" data-type="currency" data-raw="${o.mPmt}" oninput="recalcOv()" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
+          <div class="field"><label>Monthly Pmt ($)</label><div class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="decimal" id="ovPmt${id}" value="${o.mPmt}" class="has-prefix" data-type="currency" data-raw="${o.mPmt}" oninput="recalcOv()" onfocus="unformatField(this)" onblur="formatField(this)"></div></div>
         </div>
       </div>
       <div style="border-top:1px solid var(--border-subtle);padding-top:0.75rem;margin-top:0.85rem;">
@@ -2655,15 +2942,24 @@ function renderLoiOverrides() {
 function onPriceOvChange(id) {
   const o = loiOffers[id];
   const el = document.getElementById('ovPrice'+id);
-  const np = parseFloat(String(el.dataset.raw || el.value).replace(/[^0-9.\-]/g,'')) || 0;
+  // Sync data-raw from what user is actively typing
+  const rawStr = String(el.value).replace(/[^0-9.\-]/g,'');
+  el.dataset.raw = rawStr;
+  const np = parseFloat(rawStr) || 0;
   const basis = o.isBank ? (np + o.actualCpx) : np;
-  document.getElementById('ovDown'+id).value = Math.round(basis * o.downPct);
-  const rate = (parseFloat(document.getElementById('ovRate'+id).value)||0)/100/12;
-  const loan = basis - Math.round(basis*o.downPct);
+
+  const downAmt = Math.round(basis * o.downPct);
+  const downEl  = document.getElementById('ovDown'+id);
+  if (downEl) { downEl.value = downAmt; downEl.dataset.raw = downAmt; }
+
+  const rate = (parseFloat(document.getElementById('ovRate'+id)?.value)||0)/100/12;
+  const loan = basis - downAmt;
   let mp = 0;
   if (o.isIO) { mp = Math.round(loan*rate); }
   else { const m=(o.amortYrs||25)*12; if(rate>0) mp=Math.round(loan*(rate/(1-Math.pow(1+rate,-m)))); }
-  document.getElementById('ovPmt'+id).value = mp;
+  const pmtEl = document.getElementById('ovPmt'+id);
+  if (pmtEl) { pmtEl.value = mp; pmtEl.dataset.raw = mp; }
+
   recalcOv();
 }
 
@@ -2795,10 +3091,6 @@ let poiLayer      = null;
 let subjectLatLng = null;
 let addressTimer  = null;
 
-const STORAGE_ICON_RED  = createStorageIcon('#FF453A');
-const STORAGE_ICON_BLUE = createStorageIcon('#0A84FF');
-const SUBJECT_ICON      = createSubjectIcon();
-
 function createStorageIcon(color) {
   if (typeof L === 'undefined') return null;
   return L.divIcon({
@@ -2812,9 +3104,13 @@ function createStorageIcon(color) {
 
 function createSubjectIcon() {
   if (typeof L === 'undefined') return null;
+  const c = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() || '#3EAA42';
+  const cMuted = c.startsWith('#')
+    ? c + '66'  // 40% alpha hex shorthand
+    : 'rgba(62,170,66,0.4)';
   return L.divIcon({
     className: '',
-    html: `<div style="width:30px;height:30px;background:#3EAA42;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(62,170,66,0.4),0 4px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;">
+    html: `<div style="width:30px;height:30px;background:${c};border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px ${cMuted},0 4px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </div>`,
     iconSize: [30, 30],
@@ -2823,11 +3119,25 @@ function createSubjectIcon() {
   });
 }
 
-function initMap(lat, lng) {
-  const container = document.getElementById('mapContainer');
+function triggerGeocode() {
+  const addr = document.getElementById('propAddress').value.trim();
+  if (addr.length > 3) {
+    geocodeAddress(addr);
+  } else {
+    document.getElementById('propAddress').focus();
+  }
+}
 
-  // Show container FIRST so Leaflet has real dimensions to render into
+function initMap(lat, lng) {
+  const container   = document.getElementById('mapContainer');
+  const placeholder = document.getElementById('mapPlaceholder');
+
+  // Hide placeholder, show map container FIRST so Leaflet has real dimensions
+  if (placeholder) placeholder.style.display = 'none';
   container.classList.add('visible');
+  // Show the refresh button in the panel header
+  const refreshBtn = document.getElementById('mapRefreshBtn');
+  if (refreshBtn) refreshBtn.style.display = 'inline-flex';
 
   const doInit = () => {
     if (!mapInstance) {
@@ -2871,6 +3181,12 @@ function onAddressInput(val) {
   _addrTimer = setTimeout(() => fetchSuggestions(val), 400);
 }
 
+function onAddressFocus(val) {
+  // Only trigger on focus if no map is loaded yet (user is actively searching, not tabbing through)
+  if (mapInstance) return;
+  onAddressInput(val);
+}
+
 function showSpinner(show) {
   const el = document.getElementById('addrSpinner');
   if (el) el.style.display = show ? 'block' : 'none';
@@ -2878,19 +3194,16 @@ function showSpinner(show) {
 
 async function fetchSuggestions(query) {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q=${encodeURIComponent(query)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=7&addressdetails=1&namedetails=1&q=${encodeURIComponent(query)}&countrycodes=us`;
     const res  = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'StorageIQ/1.0' } });
     const data = await res.json();
     showSpinner(false);
-    if (data && data.length > 0) {
-      _addrResults = data;
-      renderSuggestions(data);
-    } else {
-      closeSuggestions();
-    }
+    _addrResults = data || [];
+    renderSuggestions(_addrResults);
   } catch(e) {
     showSpinner(false);
     console.warn('Nominatim error', e);
+    closeSuggestions();
   }
 }
 
@@ -2899,22 +3212,49 @@ function renderSuggestions(results) {
   if (!box) return;
   _addrIdx = -1;
 
+  if (!results.length) {
+    box.innerHTML = '<div class="addr-no-results">No results found — try a different address</div>';
+    box.style.display = 'block';
+    return;
+  }
+
   box.innerHTML = results.map((r, i) => {
-    // Build a clean display name
-    const a    = r.address || {};
-    const main = r.namedetails?.name || a.road || r.display_name.split(',')[0];
-    const sub  = [a.city || a.town || a.village, a.state, a.country_code?.toUpperCase()].filter(Boolean).join(', ');
-    const type = r.type || r.class || '';
-    const icon = type.includes('storage') || r.display_name.toLowerCase().includes('storage')
-      ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>`
-      : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-quaternary)" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 7 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg>`;
+    const a = r.address || {};
+
+    // Build clean street line: housenumber + road, or fallback to first display_name segment
+    const street = [a.house_number, a.road].filter(Boolean).join(' ')
+      || r.namedetails?.name
+      || r.display_name.split(',')[0];
+
+    // City / State / Country subline
+    const city    = a.city || a.town || a.village || a.hamlet || a.county || '';
+    const state   = a.state || '';
+    const country = a.country_code?.toUpperCase() || '';
+    const sub     = [city, state, country].filter(Boolean).join(', ');
+
+    // Type badge — humanize common OSM types
+    const rawType = r.type || r.class || '';
+    const typeMap  = {
+      house: 'Address', residential: 'Address', building: 'Building',
+      road: 'Road', highway: 'Road', commercial: 'Commercial',
+      retail: 'Retail', industrial: 'Industrial', storage_rental: 'Storage',
+      storage: 'Storage', amenity: 'Amenity', place: 'Place',
+    };
+    const typeLabel = typeMap[rawType] || (rawType ? rawType.charAt(0).toUpperCase() + rawType.slice(1) : '');
+
+    const isStorage = rawType.includes('storage') || r.display_name.toLowerCase().includes('storage');
+    const iconSvg = isStorage
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-quaternary)" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 7 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg>`;
+
     return `<div class="addr-suggestion" data-idx="${i}"
       onmousedown="selectSuggestion(${i})"
       onmouseover="highlightSugg(${i})">
-      <div style="margin-top:2px;flex-shrink:0;">${icon}</div>
-      <div>
-        <div class="as-main">${main}</div>
-        <div class="as-sub">${sub}</div>
+      <div class="as-icon">${iconSvg}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="as-main">${street}</div>
+        ${sub ? `<div class="as-sub">${sub}</div>` : ''}
+        ${typeLabel ? `<span class="as-type">${typeLabel}</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2933,17 +3273,22 @@ function selectSuggestion(idx) {
   const r = _addrResults[idx];
   if (!r) return;
 
-  // Set the input value to the full display name
+  const a = r.address || {};
+
+  // Build a clean address string: "123 Main St, Marion, AR"
+  const street  = [a.house_number, a.road].filter(Boolean).join(' ') || r.display_name.split(',')[0];
+  const city    = a.city || a.town || a.village || a.hamlet || '';
+  const state   = a.state || '';
+  const postcode = a.postcode || '';
+  const cleanAddr = [street, city, [state, postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+
   const input = document.getElementById('propAddress');
   if (input) {
-    input.value = r.display_name;
-    // Also update City,State field if we can
-    const a = r.address || {};
+    input.value = cleanAddr || r.display_name;
+    // Also update City, State field
     const cityEl = document.getElementById('propLocation');
-    if (cityEl) {
-      const city  = a.city || a.town || a.village || '';
-      const state = a.state || a.country || '';
-      if (city || state) cityEl.value = [city, state].filter(Boolean).join(', ');
+    if (cityEl && (city || state)) {
+      cityEl.value = [city, state].filter(Boolean).join(', ');
     }
   }
 
@@ -3000,29 +3345,32 @@ function onRadiusChange(val) {
 
 async function queryNearbyStorage(lat, lng, radiusMiles) {
   const radiusM = radiusMiles * 1609.34;
-  document.getElementById('mapPoiCount').textContent = 'Loading…';
+  const countEl = document.getElementById('mapPoiCount');
+  if (countEl) countEl.textContent = 'Searching…';
   poiLayer.clearLayers();
 
-  // Draw radius circle
+  // Draw radius circle — read accent color from CSS var at runtime
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() || '#3EAA42';
   const existing = mapInstance._layers;
   Object.values(existing).forEach(l => { if (l instanceof L.Circle) l.remove(); });
   L.circle([lat, lng], {
     radius: radiusM,
-    color: 'rgba(62,170,66,0.5)',
-    fillColor: 'rgba(62,170,66,0.05)',
-    fillOpacity: 1,
+    color: accentColor,
+    fillColor: accentColor,
+    fillOpacity: 0.04,
     weight: 1.5,
-    dashArray: '5,5'
+    dashArray: '6,5',
+    opacity: 0.5,
   }).addTo(mapInstance);
 
   try {
-    const query = `[out:json][timeout:20];
+    const query = `[out:json][timeout:25];
 (
   node["shop"="storage"](around:${Math.round(radiusM)},${lat},${lng});
   way["shop"="storage"](around:${Math.round(radiusM)},${lat},${lng});
   node["self_storage"](around:${Math.round(radiusM)},${lat},${lng});
   node["amenity"="storage_rental"](around:${Math.round(radiusM)},${lat},${lng});
-  node["name"~"storage|Storage|Self Storage|Mini Storage",i](around:${Math.round(radiusM)},${lat},${lng});
+  node["name"~"storage|self storage|mini storage",i](around:${Math.round(radiusM)},${lat},${lng});
 );
 out center;`;
 
@@ -3039,14 +3387,32 @@ out center;`;
       const elLng = el.lon || el.center?.lon;
       if (!elLat || !elLng) return;
 
-      const name = el.tags?.name || el.tags?.['brand'] || 'Self-Storage Facility';
-      const addr = [el.tags?.['addr:housenumber'], el.tags?.['addr:street'], el.tags?.['addr:city']]
-        .filter(Boolean).join(' ') || 'Address not listed';
-
-      const dist = haversineDistance(lat, lng, elLat, elLng);
-      const distStr = dist < 1 ? (dist * 5280).toFixed(0) + ' ft' : dist.toFixed(2) + ' mi';
+      const name    = el.tags?.name || el.tags?.brand || 'Self-Storage Facility';
       const isNamed = name !== 'Self-Storage Facility';
-      const icon = createStorageIcon(isNamed ? '#FF453A' : '#0A84FF');
+
+      // Build address string
+      const addrParts = [
+        el.tags?.['addr:housenumber'],
+        el.tags?.['addr:street'],
+        el.tags?.['addr:city'],
+        el.tags?.['addr:state'],
+      ].filter(Boolean);
+      const addr = addrParts.length ? addrParts.join(' ') : 'Address not listed';
+
+      const dist    = haversineDistance(lat, lng, elLat, elLng);
+      const distStr = dist < 0.1
+        ? Math.round(dist * 5280) + ' ft'
+        : dist < 1
+          ? (dist * 5280).toFixed(0) + ' ft'
+          : dist.toFixed(2) + ' mi';
+
+      // isNamed → red (direct competitor), unnamed → blue (other storage)
+      const errColor  = getComputedStyle(document.documentElement).getPropertyValue('--semantic-error').trim()  || '#FF453A';
+      const infoColor = getComputedStyle(document.documentElement).getPropertyValue('--semantic-info').trim()   || '#0A84FF';
+      const icon = createStorageIcon(isNamed ? errColor : infoColor);
+
+      // Escape name safely for inline onclick
+      const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
       const marker = L.marker([elLat, elLng], { icon }).addTo(poiLayer);
       marker.bindPopup(`
@@ -3054,16 +3420,18 @@ out center;`;
           <div class="poi-name">${name}</div>
           <div class="poi-addr">${addr}</div>
           <div class="poi-dist">${distStr} from subject</div>
-          <button class="poi-comp-btn" onclick="useAsComp('${name.replace(/'/g,"\'")}', ${dist.toFixed(3)})">Use as Comp →</button>
+          <button class="poi-comp-btn" onclick="useAsComp('${safeName}', ${dist.toFixed(3)})">+ Add as Comp</button>
         </div>
       `);
       count++;
     });
 
-    document.getElementById('mapPoiCount').textContent = count + ' storage facilit' + (count === 1 ? 'y' : 'ies') + ' found';
+    if (countEl) countEl.textContent = count
+      ? `${count} facilit${count === 1 ? 'y' : 'ies'} found`
+      : 'No storage facilities found nearby';
   } catch(e) {
     console.warn('Overpass error', e);
-    document.getElementById('mapPoiCount').textContent = 'POI query failed — try again';
+    if (countEl) countEl.textContent = 'Search failed — check connection';
   }
 }
 
@@ -3075,15 +3443,67 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+let _compList = []; // tracks added comps for card rendering
+
 function useAsComp(name, dist) {
-  // Add a blank row to unit mix pre-tagged with comp name and estimated psf based on distance
-  const tbody = document.getElementById('unitTableBody');
-  const i = tbody.children.length;
+  // Add row to unit mix
+  const tbody  = document.getElementById('unitTableBody');
+  const i      = tbody.children.length;
   const estPsf = Math.max(0.80, 1.40 - dist * 0.05).toFixed(3);
   tbody.innerHTML += buildUnitRow(i, `COMP: ${name}`, 100, 0, 0.80, parseFloat(estPsf), parseFloat(estPsf), 'Non-Climate');
   updateUnitFooter();
-  // Scroll to unit table
-  document.getElementById('unitTable').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Add comp card in the Competition Map panel
+  const distStr = dist < 0.1
+    ? Math.round(dist * 5280) + ' ft away'
+    : dist < 1
+      ? (dist * 5280).toFixed(0) + ' ft away'
+      : dist.toFixed(2) + ' mi away';
+
+  const cardId = 'comp-card-' + Date.now();
+  _compList.push({ id: cardId, name, dist, estPsf: parseFloat(estPsf) });
+
+  const section = document.getElementById('compCardsSection');
+  const grid    = document.getElementById('compCardsGrid');
+  if (section) section.style.display = 'block';
+  if (grid) {
+    const card = document.createElement('div');
+    card.className = 'comp-card';
+    card.id = cardId;
+    card.innerHTML = `
+      <button class="comp-card-remove" onclick="removeComp('${cardId}')" title="Remove comp">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="comp-card-name">${name}</div>
+      <div class="comp-card-dist">${distStr}</div>
+      <div class="comp-card-divider"></div>
+      <div class="comp-card-psf">
+        <span class="comp-card-psf-label">Est. Rent / SF</span>
+        <span class="comp-card-psf-val">$${parseFloat(estPsf).toFixed(2)}</span>
+      </div>
+      <div class="comp-card-meta">Added to unit mix as reference row</div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function removeComp(cardId) {
+  const card = document.getElementById(cardId);
+  if (card) card.remove();
+  _compList = _compList.filter(c => c.id !== cardId);
+  const grid = document.getElementById('compCardsGrid');
+  if (grid && !grid.children.length) {
+    const section = document.getElementById('compCardsSection');
+    if (section) section.style.display = 'none';
+  }
+}
+
+function clearAllComps() {
+  const grid = document.getElementById('compCardsGrid');
+  if (grid) grid.innerHTML = '';
+  _compList = [];
+  const section = document.getElementById('compCardsSection');
+  if (section) section.style.display = 'none';
 }
 
 /* ════════════════════════════════════════════════════════════════
