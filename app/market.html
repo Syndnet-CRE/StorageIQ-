@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Map — StorageIQ</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════
+   PARCYL v2 — CSS TOKEN BRIDGE
+   JS applyTheme() writes these vars on every mode switch
+══════════════════════════════════════════════════════ */
+:root {
+  /* populated by applyTheme() on DOMContentLoaded */
+  --bg-primary:       #1C1C1E;
+  --bg-secondary:     #2C2C2E;
+  --bg-tertiary:      #3A3A3C;
+  --bg-elevated:      #48484A;
+
+  --accent-primary:       #3EAA42;
+  --accent-primaryHover:  #359438;
+  --accent-primaryMuted:  rgba(62,170,66,0.12);
+  --accent-primaryBorder: rgba(62,170,66,0.30);
+  --accent-green:         #34C759;
+  --accent-greenMuted:    rgba(52,199,89,0.12);
+
+  --text-primary:     rgba(255,255,255,1.0);
+  --text-secondary:   rgba(255,255,255,0.80);
+  --text-tertiary:    rgba(255,255,255,0.55);
+  --text-quaternary:  rgba(255,255,255,0.35);
+
+  --border-subtle:    rgba(255,255,255,0.08);
+  --border-default:   rgba(255,255,255,0.12);
+  --border-strong:    rgba(255,255,255,0.20);
+
+  --semantic-success: #34C759;
+  --semantic-warning: #FFD60A;
+  --semantic-error:   #FF453A;
+  --semantic-info:    #0A84FF;
+
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  /* Legacy aliases (used throughout CSS) */
+  --ink:    var(--bg-primary);
+  --ink2:   var(--bg-secondary);
+  --ink3:   var(--bg-tertiary);
+  --seam:   var(--border-subtle);
+  --seam2:  var(--border-default);
+  --fog:    var(--text-quaternary);
+  --mist:   var(--text-tertiary);
+  --ghost:  var(--text-secondary);
+  --white:  var(--text-primary);
+  --blue:       var(--accent-primary);
+  --blue-lt:    var(--accent-green);
+  --blue-glow:  var(--accent-primaryMuted);
+  --teal:       var(--semantic-info);
+  --teal-lt:    #5AC8FA;
+  --amber:      #FF9F0A;
+  --amber-lt:   var(--semantic-warning);
+  --emerald:    var(--semantic-success);
+  --emerald-lt: var(--semantic-success);
+  --red:        var(--semantic-error);
+  --red-lt:     var(--semantic-error);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body {
+  font-family: var(--font-display);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* grain overlay — dark only */
+body:not(.light)::after {
+  content:'';
+  position:fixed;inset:0;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  z-index:9999;opacity:0.4;
+}
+
+/* ── scrollbar ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg-primary)}
+::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:3px}
+body.light ::-webkit-scrollbar-track{background:#F2F2F7}
+body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
+
+/* ══════════════════════════════════════════════════════
+   TOP NAV
+══════════════════════════════════════════════════════ */
+.topnav {
+  position: sticky; top:0; z-index:100;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0.875rem 2rem;
+  background: rgba(28,28,30,0.9);
+  backdrop-filter: blur(16px) saturate(1.6);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.nav-brand {
+  display:flex; align-items:center; gap:0.75rem;
+}
+.nav-icon {
+  width:2.25rem; height:2.25rem;
+  background: linear-gradient(135deg, var(--accent-primaryHover), var(--accent-primary));
+  border-radius:0.5rem;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 0 16px var(--accent-primaryMuted);
+  transition: all 0.2s;
+}
+.nav-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.nav-wordmark sup {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color: var(--accent-green);
+  vertical-align: super;
+  margin-left:2px;
+}
+.nav-steps {
+  display:flex; align-items:center; gap:0.25rem;
+}
+.nav-step {
+  display:flex; align-items:center; gap:0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+.nav-step:hover {
+  color: var(--text-tertiary);
+  background: rgba(255,255,255,0.04);
+}
+.nav-step.active {
+  background: rgba(62,170,66,0.12);
+  border-color: rgba(62,170,66,0.30);
+  color: var(--accent-green);
+}
+.nav-step-num {
+  width:1.25rem; height:1.25rem;
+  border-radius:50%;
+  background:var(--seam);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.6rem;
+  font-weight:800;
+}
+.nav-step.active .nav-step-num {
+  background: var(--blue);
+  color:#fff;
+}
+.nav-step-sep {
+  width:2rem; height:1px;
+  background: var(--seam);
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.nav-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 2rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-toggle:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border-default);
+  color: var(--text-tertiary);
+}
+
+/* ══════════════════════════════════════════════════════
+   MARKET PAGE STYLES
+══════════════════════════════════════════════════════ */
+.market-hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem 2rem;
+  text-align: center;
+}
+.market-hero h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+.market-hero h1 em {
+  color: var(--accent-green);
+  font-style: italic;
+}
+.market-hero p {
+  font-size: 0.9rem;
+  color: var(--text-quaternary);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.feature-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  padding: 1.5rem;
+  position: relative;
+  opacity: 0.6;
+}
+.feature-card-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.6rem;
+  border-radius: 1rem;
+}
+.feature-card h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.feature-card p {
+  font-size: 0.75rem;
+  color: var(--text-quaternary);
+  line-height: 1.5;
+}
+
+.map-section {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+.map-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  overflow: hidden;
+}
+#marketMap {
+  height: 400px;
+  width: 100%;
+}
+
+/* Leaflet tile adjustments for dark mode */
+.leaflet-tile-pane { filter: none; }
+body.light .leaflet-tile-pane { filter: none; }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+  .market-hero h1 {
+    font-size: 2rem;
+  }
+  .nav-steps {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+  <div id="appNav"></div>
+
+  <section class="market-hero">
+    <h1>Market <em>Intelligence</em></h1>
+    <p>Live property data, comp analysis, and market mapping — coming soon.</p>
+  </section>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="feature-card-badge">Coming Soon</span>
+      <h3><i data-lucide="search" style="width:18px;height:18px;"></i> Property Search</h3>
+      <p>ATTOM/PropStream API integration for instant property lookups, owner info, and transaction history.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-card-badge">Coming Soon</span>
+      <h3><i data-lucide="git-compare" style="width:18px;height:18px;"></i> Comp Puller</h3>
+      <p>Pull sold comps within radius, auto-populate underwriter with market data.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-card-badge">Coming Soon</span>
+      <h3><i data-lucide="landmark" style="width:18px;height:18px;"></i> County Assessor</h3>
+      <p>Owner lookup, tax history, assessed value, and deed information from public records.</p>
+    </div>
+  </div>
+
+  <section class="map-section">
+    <div class="map-container">
+      <div id="marketMap"></div>
+    </div>
+  </section>
+
+  <script src="js/shared.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Restore theme
+      try {
+        var saved = localStorage.getItem("parcyl-theme");
+        if (saved === "light" || saved === "dark") _currentMode = saved;
+      } catch(e) {}
+
+      // Apply theme
+      applyTheme(getTheme());
+
+      // Render nav with Market Map active
+      renderNav("market", null, null);
+
+      // Init Lucide
+      initLucide();
+
+      // Init map - centered on USA with dark tiles
+      var map = L.map("marketMap", {
+        center: [39.8283, -98.5795],
+        zoom: 4,
+        zoomControl: true
+      });
+
+      // Use CartoDB dark tiles
+      var isDark = !document.body.classList.contains("light");
+      var tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+      L.tileLayer(tileUrl, {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+    });
+  </script>
+</body>
+</html>
