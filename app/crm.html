@@ -1928,13 +1928,14 @@ function dealsCreate(partial) {
 function dealsUpdate(id, partial) {
   var deal = dealsGetById(id);
   if (!deal) return null;
+  var oldStage = deal.stage;
   for (var key in partial) {
     if (partial.hasOwnProperty(key)) {
       deal[key] = partial[key];
     }
   }
   deal.updatedAt = new Date().toISOString();
-  if (partial.stage && partial.stage !== deal.stage) {
+  if (partial.stage && partial.stage !== oldStage) {
     deal.stageEnteredAt = deal.updatedAt;
   }
   dealsSave(deal);

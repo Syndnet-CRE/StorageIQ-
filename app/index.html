@@ -47,7 +47,7 @@
 
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   --font-body: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    var(--font-mono);
+  --font-mono:    'JetBrains Mono', monospace;
 
   /* Legacy aliases (used throughout CSS) */
   --ink:    var(--bg-primary);
@@ -3434,10 +3434,11 @@ async function geocodeAddress(address) {
   } catch(e) { console.warn('Geocode error', e); }
 }
 
-// Overpass API endpoints with fallback mirror
+// Overpass API endpoints with fallback mirrors (CORS-friendly)
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter'
+  'https://overpass.openstreetmap.ru/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
 let _overpassRetryTimer = null;
 
@@ -3452,12 +3453,21 @@ function onRadiusChange(val) {
   }
 }
 
-async function queryNearbyStorage(lat, lng, radiusMiles, endpointIdx = 0, attempt = 1) {
-  const MAX_RETRIES = 3;
+async function queryNearbyStorage(lat, lng, radiusMiles, endpointIdx = 0, attempt = 1, totalAttempts = 0) {
+  const MAX_RETRIES_PER_ENDPOINT = 2;
+  const MAX_TOTAL_ATTEMPTS = 6; // hard limit to prevent infinite loops
   const BASE_DELAY = 1000;
   const radiusM = radiusMiles * 1609.34;
   const countEl = document.getElementById('mapPoiCount');
-  if (countEl) countEl.textContent = 'Searching…';
+
+  // Prevent infinite loops
+  if (totalAttempts >= MAX_TOTAL_ATTEMPTS) {
+    if (countEl) countEl.textContent = 'Search unavailable — all servers failed. Try again later.';
+    console.warn('Overpass: max total attempts reached, aborting');
+    return;
+  }
+
+  if (countEl) countEl.textContent = 'Searching nearby facilities…';
   poiLayer.clearLayers();
 
   // Draw radius circle — read accent color from CSS var at runtime
@@ -3491,20 +3501,23 @@ out center;`;
       body: 'data=' + encodeURIComponent(query)
     });
 
-    // Check status before parsing
-    if (res.status === 429 || res.status === 503) {
-      // Rate limited or service unavailable — retry with backoff or try mirror
-      if (attempt < MAX_RETRIES) {
+    // Check status before parsing — handle timeouts, rate limits, server errors
+    if (res.status === 429 || res.status === 503 || res.status === 504 || res.status === 502) {
+      // Rate limited, timeout, or server error — retry with backoff or try mirror
+      if (attempt < MAX_RETRIES_PER_ENDPOINT) {
         const delay = BASE_DELAY * Math.pow(2, attempt - 1);
-        if (countEl) countEl.textContent = `Rate limited, retrying in ${delay/1000}s…`;
+        if (countEl) countEl.textContent = `Server busy, retrying in ${delay/1000}s…`;
         await new Promise(r => setTimeout(r, delay));
-        return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx, attempt + 1);
+        return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx, attempt + 1, totalAttempts + 1);
       } else if (endpointIdx + 1 < OVERPASS_ENDPOINTS.length) {
         // Try next mirror
         if (countEl) countEl.textContent = 'Trying backup server…';
-        return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx + 1, 1);
+        return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx + 1, 1, totalAttempts + 1);
       }
-      throw new Error(`Overpass API unavailable (${res.status})`);
+      // All endpoints exhausted
+      if (countEl) countEl.textContent = 'Search unavailable — servers overloaded. Try again later.';
+      console.warn(`Overpass API unavailable after all retries (${res.status})`);
+      return;
     }
 
     if (!res.ok) {
@@ -3569,13 +3582,14 @@ out center;`;
       ? `${count} facilit${count === 1 ? 'y' : 'ies'} found`
       : 'No storage facilities found nearby';
   } catch(e) {
-    console.warn('Overpass error', e);
-    // Try fallback mirror if available
-    if (endpointIdx + 1 < OVERPASS_ENDPOINTS.length) {
+    console.warn('Overpass error:', e.message || e);
+    // Try fallback mirror if available AND we haven't exhausted total attempts
+    if (endpointIdx + 1 < OVERPASS_ENDPOINTS.length && totalAttempts + 1 < MAX_TOTAL_ATTEMPTS) {
       if (countEl) countEl.textContent = 'Trying backup server…';
-      return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx + 1, 1);
+      return queryNearbyStorage(lat, lng, radiusMiles, endpointIdx + 1, 1, totalAttempts + 1);
     }
-    if (countEl) countEl.textContent = 'Search failed — check connection';
+    // All options exhausted — show user-friendly error
+    if (countEl) countEl.textContent = 'Search failed — check your connection and try again';
   }
 }
 
