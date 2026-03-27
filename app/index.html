@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StorageIQ — Self-Storage Acquisition Platform</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -45,7 +45,8 @@
   --semantic-error:   #FF453A;
   --semantic-info:    #0A84FF;
 
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --font-body: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    var(--font-mono);
 
   /* Legacy aliases (used throughout CSS) */
@@ -69,6 +70,44 @@
   --emerald-lt: var(--semantic-success);
   --red:        var(--semantic-error);
   --red-lt:     var(--semantic-error);
+}
+
+[data-theme="light"] {
+  --bg-primary:   #FDFCFA;
+  --bg-secondary: #F6F4F0;
+  --bg-tertiary:  #EAE8E4;
+  --bg-elevated:  #E0DED9;
+}
+
+/* Typography split — SF Pro Display for UI, Roboto for body/data */
+body {
+  font-family: var(--font-display);
+}
+
+/* Roboto for body text, field inputs, textareas, paragraphs */
+p, li, td, .field input, .field textarea, .field select,
+.activity-text, .detail-section, .timeline-content,
+.pipeline-table td, .doc-name, .doc-meta,
+input[type="text"], input[type="number"], textarea, select {
+  font-family: var(--font-body);
+}
+
+/* SF Pro Display stays on all UI chrome */
+nav, button, .nav-step, .nav-wordmark, label,
+.panel-title, .section-head, .field label,
+.detail-kpi-label, .pipeline-kpi-label,
+.stage-badge, .substage-badge, .column-title,
+.crm-detail-tab, .detail-tab, .modal-header h3,
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* JetBrains Mono stays for all numeric/financial data */
+.font-mono, [class*="mono"], .pipeline-table td.mono,
+.detail-kpi-value, .pipeline-kpi-value,
+.deal-price, .card-price, .stat-value,
+.countdown-value, .acq-node-days {
+  font-family: var(--font-mono);
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -169,6 +208,7 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
   color: var(--text-quaternary);
   cursor: pointer;
   transition: all 0.2s;
+  text-decoration: none;
   border: 1px solid transparent;
 }
 .nav-step.active {
@@ -1439,30 +1479,14 @@ body.light .unit-add-bar select {
     <span class="nav-wordmark">StorageIQ<sup>beta</sup></span>
   </div>
   <div class="nav-steps">
-    <div class="nav-step active" id="navStep1" onclick="goToScreen(1)">
-      <div class="nav-step-num">1</div> Underwrite
-    </div>
-    <div class="nav-step-sep"></div>
-    <div class="nav-step" id="navStep2" onclick="goToScreen(2)">
-      <div class="nav-step-num">2</div> Generate LOI
-    </div>
+    <a class="nav-step" href="dashboard.html"><div class="nav-step-num">1</div>Dashboard</a>
+    <a class="nav-step active" href="index.html"><div class="nav-step-num">2</div>Underwrite</a>
+    <a class="nav-step" href="crm.html"><div class="nav-step-num">3</div>Deal Room</a>
+    <a class="nav-step" href="market.html"><div class="nav-step-num">4</div>Market Map</a>
+    <a class="nav-step" href="agents.html"><div class="nav-step-num">5</div>AI Agents</a>
   </div>
   <div style="display:flex;align-items:center;gap:0.75rem;">
-    <button id="themeToggleBtn" onclick="toggleAppTheme()" style="
-      display:flex;align-items:center;gap:0.4rem;
-      background:var(--bg-secondary);
-      border:1px solid var(--border-default);
-      color:var(--text-secondary);
-      padding:0.45rem 0.9rem;
-      border-radius:2rem;
-      font-size:0.65rem;
-      font-weight:700;
-      letter-spacing:0.08em;
-      text-transform:uppercase;
-      cursor:pointer;
-      transition:all 0.2s;
-      font-family:var(--font-display);
-    " title="Toggle light/dark mode">
+    <button id="themeToggleBtn" onclick="toggleAppTheme()" style="display:flex;align-items:center;gap:0.4rem;background:var(--bg-secondary);border:1px solid var(--border-default);color:var(--text-secondary);padding:0.45rem 0.9rem;border-radius:2rem;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;font-family:var(--font-display);">
       <i data-lucide="sun" id="themeIcon" style="width:14px;height:14px;stroke:currentColor;flex-shrink:0;"></i>
       <span id="themeLabel">Light</span>
     </button>
@@ -3676,10 +3700,10 @@ const darkTheme = {
 
 const lightTheme = {
   bg: {
-    primary:   "#FFFFFF",
-    secondary: "#F2F2F7",
-    tertiary:  "#E5E5EA",
-    elevated:  "#D1D1D6",
+    primary:   "#FDFCFA",
+    secondary: "#F6F4F0",
+    tertiary:  "#EAE8E4",
+    elevated:  "#E0DED9",
   },
   accent: {
     primary:       "#2D8F32",
@@ -3773,7 +3797,7 @@ function applyTheme(t) {
     const isDark = (t === darkTheme);
     nav.style.background = isDark
       ? "rgba(28,28,30,0.92)"
-      : "rgba(255,255,255,0.92)";
+      : "rgba(253,252,250,0.94)";
     nav.style.borderBottomColor = t.border.subtle;
   }
 

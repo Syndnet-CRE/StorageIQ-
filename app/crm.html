@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deal Room — StorageIQ</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
@@ -33,8 +33,40 @@
   --semantic-warning:    #FFD60A;
   --semantic-error:      #FF453A;
   --semantic-info:       #0A84FF;
-  --font-display:        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-display:        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --font-body:           "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:           "JetBrains Mono", monospace;
+}
+
+/* Typography split — SF Pro Display for UI, Roboto for body/data */
+body {
+  font-family: var(--font-display);
+}
+
+/* Roboto for body text, field inputs, textareas, paragraphs */
+p, li, td, .field input, .field textarea, .field select,
+.activity-text, .detail-section, .timeline-content,
+.pipeline-table td, .doc-name, .doc-meta,
+input[type="text"], input[type="number"], textarea, select {
+  font-family: var(--font-body);
+}
+
+/* SF Pro Display stays on all UI chrome */
+nav, button, .nav-step, .nav-wordmark, label,
+.panel-title, .section-head, .field label,
+.detail-kpi-label, .pipeline-kpi-label,
+.stage-badge, .substage-badge, .column-title,
+.crm-detail-tab, .detail-tab, .modal-header h3,
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* JetBrains Mono stays for all numeric/financial data */
+.font-mono, [class*="mono"], .pipeline-table td.mono,
+.detail-kpi-value, .pipeline-kpi-value,
+.deal-price, .card-price, .stat-value,
+.countdown-value, .acq-node-days {
+  font-family: var(--font-mono);
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1524,6 +1556,17 @@ body.light .field select {
     min-width: 70px;
   }
 }
+
+/* ══════════════════════════════════════════════════════
+   PRINT STYLES
+══════════════════════════════════════════════════════ */
+@media print {
+  .topnav, .crm-sidebar, .crm-detail-tabs, .detail-panel .crm-detail-header button,
+  .action-btn, .pipeline-header, .pipeline-table-wrap { display: none !important; }
+  .detail-panel { position: static !important; transform: none !important; width: 100% !important; box-shadow: none !important; border: none !important; }
+  body { background: white !important; }
+  .scorecard-section { break-inside: avoid; }
+}
 </style>
 </head>
 <body>
@@ -2367,6 +2410,349 @@ function renderFinancialsTab(deal) {
 }
 
 /* ══════════════════════════════════════════════════════
+   SCORECARD TAB
+══════════════════════════════════════════════════════ */
+function renderScorecardTab(deal) {
+  var f = deal.financials || {};
+  var lc = f.lastCalc || {};
+  var today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Helper for safe number formatting
+  function fmt(val, decimals) {
+    if (val === null || val === undefined || val === '' || isNaN(val)) return '—';
+    return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: decimals || 0, maximumFractionDigits: decimals || 0 });
+  }
+  function pct(val, decimals) {
+    if (val === null || val === undefined || val === '' || isNaN(val)) return '—';
+    return parseFloat(val).toFixed(decimals || 1) + '%';
+  }
+  function curr(val) {
+    if (val === null || val === undefined || val === '' || isNaN(val)) return '—';
+    var num = parseFloat(val);
+    if (num >= 1000000) return '$' + (num / 1000000).toFixed(2) + 'm';
+    return '$' + num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  }
+
+  // Section style wrapper
+  var sectionStyle = 'margin-bottom:2rem;background:var(--bg-primary);border-radius:0.75rem;border:1px solid var(--border-subtle);overflow:hidden;padding:1.25rem;';
+  var headingStyle = 'font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-quaternary);border-bottom:1px solid var(--border-subtle);margin-bottom:0.75rem;padding-bottom:0.5rem;';
+  var tableStyle = 'width:100%;border-collapse:collapse;font-size:0.78rem;';
+  var thStyle = 'text-align:left;padding:0.5rem 0.75rem;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-quaternary);border-bottom:1px solid var(--border-subtle);background:var(--bg-tertiary);';
+  var tdStyle = 'padding:0.6rem 0.75rem;border-bottom:1px solid var(--border-subtle);color:var(--text-secondary);';
+  var tdMono = 'padding:0.6rem 0.75rem;border-bottom:1px solid var(--border-subtle);color:var(--text-primary);font-family:var(--font-mono);';
+  var tdLabel = 'padding:0.6rem 0.75rem;border-bottom:1px solid var(--border-subtle);color:var(--text-tertiary);font-size:0.72rem;';
+  var noiRowStyle = 'background:var(--accent-primaryMuted);font-weight:700;';
+
+  var html = '';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 0: Header bar
+  // ═══════════════════════════════════════════════════════════
+  html += '<div class="scorecard-section" style="' + sectionStyle + 'display:flex;justify-content:space-between;align-items:flex-start;">' +
+    '<div>' +
+      '<h2 style="font-size:1.25rem;font-weight:700;color:var(--text-primary);margin-bottom:0.25rem;">' + (deal.propertyName || 'Untitled Deal') + '</h2>' +
+      '<p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:0.15rem;">' +
+        (deal.address || '') + (deal.address && deal.city ? ', ' : '') + (deal.city || '') + (deal.city && deal.state ? ', ' : '') + (deal.state || '') +
+      '</p>' +
+      '<p style="font-size:0.65rem;color:var(--text-quaternary);">Generated: ' + today + '</p>' +
+    '</div>' +
+    '<button onclick="window.print()" style="display:flex;align-items:center;gap:0.4rem;background:var(--bg-tertiary);border:1px solid var(--border-default);color:var(--text-secondary);padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.7rem;font-weight:600;cursor:pointer;transition:all 0.15s;">' +
+      '<i data-lucide="printer" style="width:14px;height:14px;"></i> Export / Print PDF' +
+    '</button>' +
+  '</div>';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 1: Acquisition Summary
+  // ═══════════════════════════════════════════════════════════
+  var purchasePrice = deal.askingPrice || lc.purchasePrice || 0;
+  var closingCostPct = lc.closingCostPct || 2;
+  var closingCosts = purchasePrice * (closingCostPct / 100);
+  var hardSoftCosts = lc.hardSoftCosts || 0;
+  var totalBasis = purchasePrice + closingCosts + hardSoftCosts;
+  var loanAmount = lc.loanAmount || (purchasePrice * 0.7);
+  var ltv = purchasePrice > 0 ? (loanAmount / purchasePrice) * 100 : 0;
+  var equityRequired = totalBasis - loanAmount;
+  var equityPct = totalBasis > 0 ? (equityRequired / totalBasis) * 100 : 0;
+
+  html += '<div class="scorecard-section" style="' + sectionStyle + '">' +
+    '<div style="' + headingStyle + '">Acquisition Summary</div>' +
+    '<table style="' + tableStyle + '">' +
+      '<tr><td style="' + tdLabel + '">Purchase Price</td><td style="' + tdMono + '">' + curr(purchasePrice) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Closing Costs (' + pct(closingCostPct, 1) + ')</td><td style="' + tdMono + '">' + curr(closingCosts) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Hard/Soft Costs</td><td style="' + tdMono + '">' + curr(hardSoftCosts) + '</td></tr>' +
+      '<tr style="font-weight:600;"><td style="' + tdLabel + 'font-weight:600;">Total Basis</td><td style="' + tdMono + '">' + curr(totalBasis) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Loan Amount</td><td style="' + tdMono + '">' + curr(loanAmount) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">LTV %</td><td style="' + tdMono + '">' + pct(ltv, 1) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Equity Required</td><td style="' + tdMono + 'color:var(--semantic-success);">' + curr(equityRequired) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Equity as % of Basis</td><td style="' + tdMono + '">' + pct(equityPct, 1) + '</td></tr>' +
+    '</table>' +
+  '</div>';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 2: Unit Mix
+  // ═══════════════════════════════════════════════════════════
+  var unitMix = f.unitMix || [];
+  html += '<div class="scorecard-section" style="' + sectionStyle + '">' +
+    '<div style="' + headingStyle + '">Unit Mix</div>' +
+    '<table style="' + tableStyle + '">' +
+      '<thead><tr>' +
+        '<th style="' + thStyle + '">Type</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Size (SF)</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Units</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Occ %</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Rent/SF</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Mo. GSR</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Ann. GSR</th>' +
+        '<th style="' + thStyle + 'text-align:right;">% of Total</th>' +
+      '</tr></thead>' +
+      '<tbody>';
+
+  var totalUnits = 0, totalAnnGSR = 0, totalSF = 0;
+  for (var u = 0; u < unitMix.length; u++) {
+    var unit = unitMix[u];
+    var unitCount = parseFloat(unit.units) || 0;
+    var unitSF = parseFloat(unit.size) || 0;
+    var unitOcc = parseFloat(unit.occupancy) || 0;
+    var rentPerSF = parseFloat(unit.rentPerSF) || 0;
+    var moGSR = unitCount * unitSF * rentPerSF;
+    var annGSR = moGSR * 12;
+    totalUnits += unitCount;
+    totalAnnGSR += annGSR;
+    totalSF += unitCount * unitSF;
+
+    html += '<tr>' +
+      '<td style="' + tdStyle + '">' + (unit.type || 'Unit ' + (u+1)) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + fmt(unitSF) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + fmt(unitCount) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + pct(unitOcc) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">$' + fmt(rentPerSF, 2) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + curr(moGSR) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + curr(annGSR) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + (totalAnnGSR > 0 ? pct((annGSR/totalAnnGSR)*100, 1) : '—') + '</td>' +
+    '</tr>';
+  }
+
+  if (unitMix.length === 0) {
+    html += '<tr><td colspan="8" style="' + tdStyle + 'text-align:center;color:var(--text-quaternary);">No unit mix data — run underwriting to populate</td></tr>';
+  } else {
+    var avgRentPerSF = totalSF > 0 ? (totalAnnGSR / 12) / totalSF : 0;
+    html += '<tr style="font-weight:600;background:var(--bg-tertiary);">' +
+      '<td style="' + tdStyle + 'font-weight:600;">TOTALS</td>' +
+      '<td style="' + tdMono + 'text-align:right;">—</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + fmt(totalUnits) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">—</td>' +
+      '<td style="' + tdMono + 'text-align:right;">$' + fmt(avgRentPerSF, 2) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + curr(totalAnnGSR/12) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">' + curr(totalAnnGSR) + '</td>' +
+      '<td style="' + tdMono + 'text-align:right;">100%</td>' +
+    '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 3: Income Statement
+  // ═══════════════════════════════════════════════════════════
+  var gsr = lc.grossScheduledRent || totalAnnGSR || 0;
+  var vacancyPct = lc.vacancyPct || 10;
+  var vacancyLoss = gsr * (vacancyPct / 100);
+  var otherIncome = lc.otherIncome || 0;
+  var egr = gsr - vacancyLoss + otherIncome;
+  var mgmtFeePct = lc.mgmtFeePct || 6;
+  var mgmtFee = egr * (mgmtFeePct / 100);
+  var propTaxes = lc.propertyTaxes || 0;
+  var insurance = lc.insurance || 0;
+  var maintenance = lc.maintenance || 0;
+  var utilities = lc.utilities || 0;
+  var reserves = lc.reserves || 0;
+  var totalOpex = mgmtFee + propTaxes + insurance + maintenance + utilities + reserves;
+  var opexRatio = egr > 0 ? (totalOpex / egr) * 100 : 0;
+  var noi = egr - totalOpex;
+  var capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+  var yieldOnCost = totalBasis > 0 ? (noi / totalBasis) * 100 : 0;
+
+  html += '<div class="scorecard-section" style="' + sectionStyle + '">' +
+    '<div style="' + headingStyle + '">Income Statement</div>' +
+    '<table style="' + tableStyle + '">' +
+      '<tr><td style="' + tdLabel + '">Gross Scheduled Rent</td><td style="' + tdMono + '">' + curr(gsr) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Vacancy Loss (' + pct(vacancyPct, 1) + ')</td><td style="' + tdMono + 'color:var(--semantic-error);">(' + curr(vacancyLoss) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">+ Other Income</td><td style="' + tdMono + '">' + curr(otherIncome) + '</td></tr>' +
+      '<tr style="font-weight:600;"><td style="' + tdLabel + 'font-weight:600;">= Effective Gross Revenue</td><td style="' + tdMono + '">' + curr(egr) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Management Fee (' + pct(mgmtFeePct, 1) + ')</td><td style="' + tdMono + '">(' + curr(mgmtFee) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Property Taxes</td><td style="' + tdMono + '">(' + curr(propTaxes) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Insurance</td><td style="' + tdMono + '">(' + curr(insurance) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Maintenance</td><td style="' + tdMono + '">(' + curr(maintenance) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Utilities</td><td style="' + tdMono + '">(' + curr(utilities) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">− Reserves</td><td style="' + tdMono + '">(' + curr(reserves) + ')</td></tr>' +
+      '<tr style="font-weight:600;"><td style="' + tdLabel + 'font-weight:600;">= Total Operating Expenses</td><td style="' + tdMono + '">(' + curr(totalOpex) + ')</td></tr>' +
+      '<tr><td style="' + tdLabel + '">OpEx Ratio</td><td style="' + tdMono + '">' + pct(opexRatio, 1) + '</td></tr>' +
+      '<tr style="' + noiRowStyle + '"><td style="' + tdLabel + 'font-weight:700;color:var(--text-primary);">= NET OPERATING INCOME</td><td style="' + tdMono + 'color:var(--semantic-success);font-weight:700;">' + curr(noi) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Cap Rate (NOI / Purchase Price)</td><td style="' + tdMono + '">' + pct(capRate, 2) + '</td></tr>' +
+      '<tr><td style="' + tdLabel + '">Yield on Cost (NOI / Total Basis)</td><td style="' + tdMono + '">' + pct(yieldOnCost, 2) + '</td></tr>' +
+    '</table>' +
+  '</div>';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 4: Debt & Returns
+  // ═══════════════════════════════════════════════════════════
+  var intRate = lc.interestRate || 7;
+  var amortYrs = lc.amortization || 25;
+  var ioPeriod = lc.ioPeriod || 0;
+  var monthlyPmt = lc.monthlyPayment || 0;
+  var annualDS = monthlyPmt * 12;
+  var dscr = annualDS > 0 ? noi / annualDS : 0;
+  var debtYield = loanAmount > 0 ? (noi / loanAmount) * 100 : 0;
+  var cashFlowAfterDS = noi - annualDS;
+  var coc = equityRequired > 0 ? (cashFlowAfterDS / equityRequired) * 100 : 0;
+  var equityMult = lc.equityMultiple || '—';
+
+  html += '<div class="scorecard-section" style="' + sectionStyle + '">' +
+    '<div style="' + headingStyle + '">Debt & Returns</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">' +
+      '<div>' +
+        '<div style="font-size:0.55rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-quaternary);margin-bottom:0.5rem;">Debt Structure</div>' +
+        '<table style="' + tableStyle + '">' +
+          '<tr><td style="' + tdLabel + '">Loan Amount</td><td style="' + tdMono + '">' + curr(loanAmount) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Interest Rate</td><td style="' + tdMono + '">' + pct(intRate, 2) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Amortization</td><td style="' + tdMono + '">' + fmt(amortYrs) + ' yrs</td></tr>' +
+          '<tr><td style="' + tdLabel + '">IO Period</td><td style="' + tdMono + '">' + fmt(ioPeriod) + ' yrs</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Monthly Payment</td><td style="' + tdMono + '">' + curr(monthlyPmt) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Annual Debt Service</td><td style="' + tdMono + '">' + curr(annualDS) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">DSCR</td><td style="' + tdMono + (dscr >= 1.25 ? 'color:var(--semantic-success);' : dscr >= 1.0 ? 'color:var(--semantic-warning);' : 'color:var(--semantic-error);') + '">' + fmt(dscr, 2) + 'x</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Debt Yield</td><td style="' + tdMono + '">' + pct(debtYield, 2) + '</td></tr>' +
+        '</table>' +
+      '</div>' +
+      '<div>' +
+        '<div style="font-size:0.55rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-quaternary);margin-bottom:0.5rem;">Returns</div>' +
+        '<table style="' + tableStyle + '">' +
+          '<tr><td style="' + tdLabel + '">Purchase Price</td><td style="' + tdMono + '">' + curr(purchasePrice) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Total Equity</td><td style="' + tdMono + '">' + curr(equityRequired) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Cash Flow After DS</td><td style="' + tdMono + (cashFlowAfterDS >= 0 ? 'color:var(--semantic-success);' : 'color:var(--semantic-error);') + '">' + curr(cashFlowAfterDS) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Cash-on-Cash Return</td><td style="' + tdMono + 'color:var(--semantic-success);">' + pct(coc, 2) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Equity Multiple (est.)</td><td style="' + tdMono + '">' + (typeof equityMult === 'number' ? fmt(equityMult, 2) + 'x' : equityMult) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Cap Rate</td><td style="' + tdMono + '">' + pct(capRate, 2) + '</td></tr>' +
+          '<tr><td style="' + tdLabel + '">Yield on Cost</td><td style="' + tdMono + '">' + pct(yieldOnCost, 2) + '</td></tr>' +
+        '</table>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 5: Three Offer Scenarios
+  // ═══════════════════════════════════════════════════════════
+  var scenarios = f.scenarios || [];
+  var defaultScenarios = [
+    { name: 'Bank Loan', ltv: 70, rate: 7.0, io: 0 },
+    { name: 'Seller Fin.', ltv: 80, rate: 6.0, io: 2 },
+    { name: 'Interest Only', ltv: 75, rate: 6.5, io: 5 }
+  ];
+  if (scenarios.length === 0) scenarios = defaultScenarios;
+
+  html += '<div class="scorecard-section" style="' + sectionStyle + '">' +
+    '<div style="' + headingStyle + '">Three Offer Scenarios</div>' +
+    '<table style="' + tableStyle + '">' +
+      '<thead><tr>' +
+        '<th style="' + thStyle + '">Metric</th>';
+
+  for (var s = 0; s < scenarios.length; s++) {
+    html += '<th style="' + thStyle + 'text-align:right;">' + (scenarios[s].name || 'Scenario ' + (s+1)) + '</th>';
+  }
+  html += '</tr></thead><tbody>';
+
+  // Calculate each scenario
+  var scenarioData = [];
+  for (var sc = 0; sc < scenarios.length; sc++) {
+    var scen = scenarios[sc];
+    var sLtv = scen.ltv || 70;
+    var sLoan = purchasePrice * (sLtv / 100);
+    var sRate = scen.rate || 7;
+    var sIo = scen.io || 0;
+    var sMonthlyRate = sRate / 100 / 12;
+    var sNumPayments = (amortYrs || 25) * 12;
+    var sMonthlyPmt = sIo > 0 ? (sLoan * sMonthlyRate) : (sLoan * sMonthlyRate * Math.pow(1 + sMonthlyRate, sNumPayments)) / (Math.pow(1 + sMonthlyRate, sNumPayments) - 1);
+    var sAnnualDS = sMonthlyPmt * 12;
+    var sDscr = sAnnualDS > 0 ? noi / sAnnualDS : 0;
+    var sEquity = totalBasis - sLoan;
+    var sCashFlow = noi - sAnnualDS;
+    var sCoc = sEquity > 0 ? (sCashFlow / sEquity) * 100 : 0;
+    scenarioData.push({ ltv: sLtv, loan: sLoan, rate: sRate, io: sIo, monthly: sMonthlyPmt, annual: sAnnualDS, dscr: sDscr, equity: sEquity, coc: sCoc });
+  }
+
+  var rows = [
+    { label: 'Offer Price', key: 'price' },
+    { label: 'LTV %', key: 'ltv' },
+    { label: 'Loan Amount', key: 'loan' },
+    { label: 'Interest Rate', key: 'rate' },
+    { label: 'IO Period', key: 'io' },
+    { label: 'Monthly Payment', key: 'monthly' },
+    { label: 'Annual Debt Service', key: 'annual' },
+    { label: 'DSCR', key: 'dscr' },
+    { label: 'Equity Required', key: 'equity' },
+    { label: 'Cash-on-Cash Return', key: 'coc' }
+  ];
+
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r];
+    html += '<tr><td style="' + tdLabel + '">' + row.label + '</td>';
+    for (var sd = 0; sd < scenarioData.length; sd++) {
+      var d = scenarioData[sd];
+      var val = '';
+      if (row.key === 'price') val = curr(purchasePrice);
+      else if (row.key === 'ltv') val = pct(d.ltv, 1);
+      else if (row.key === 'loan') val = curr(d.loan);
+      else if (row.key === 'rate') val = pct(d.rate, 2);
+      else if (row.key === 'io') val = fmt(d.io) + ' yrs';
+      else if (row.key === 'monthly') val = curr(d.monthly);
+      else if (row.key === 'annual') val = curr(d.annual);
+      else if (row.key === 'dscr') val = fmt(d.dscr, 2) + 'x';
+      else if (row.key === 'equity') val = curr(d.equity);
+      else if (row.key === 'coc') val = pct(d.coc, 2);
+      html += '<td style="' + tdMono + 'text-align:right;">' + val + '</td>';
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 6: Market Context
+  // ═══════════════════════════════════════════════════════════
+  var comps = deal.marketComps || [];
+  html += '<div class="scorecard-section" style="' + sectionStyle + '">' +
+    '<div style="' + headingStyle + '">Market Context</div>' +
+    '<table style="' + tableStyle + '">' +
+      '<thead><tr>' +
+        '<th style="' + thStyle + '">Facility</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Distance</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Est. Units</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Occ %</th>' +
+        '<th style="' + thStyle + 'text-align:right;">Avg Rent/SF</th>' +
+      '</tr></thead>' +
+      '<tbody>';
+
+  if (comps.length === 0) {
+    html += '<tr><td colspan="5" style="' + tdStyle + 'text-align:center;color:var(--text-quaternary);">Run Market Map to populate competing facility data</td></tr>';
+  } else {
+    for (var c = 0; c < comps.length; c++) {
+      var comp = comps[c];
+      html += '<tr>' +
+        '<td style="' + tdStyle + '">' + (comp.name || 'Competitor ' + (c+1)) + '</td>' +
+        '<td style="' + tdMono + 'text-align:right;">' + (comp.distance ? fmt(comp.distance, 1) + ' mi' : '—') + '</td>' +
+        '<td style="' + tdMono + 'text-align:right;">' + (comp.units ? fmt(comp.units) : '—') + '</td>' +
+        '<td style="' + tdMono + 'text-align:right;">' + (comp.occupancy ? pct(comp.occupancy) : '—') + '</td>' +
+        '<td style="' + tdMono + 'text-align:right;">' + (comp.avgRent ? '$' + fmt(comp.avgRent, 2) : '—') + '</td>' +
+      '</tr>';
+    }
+  }
+
+  html += '</tbody></table>' +
+    '<p style="font-size:0.6rem;color:var(--text-quaternary);margin-top:0.75rem;font-style:italic;">Market data sourced from OpenStreetMap via Overpass API</p>' +
+  '</div>';
+
+  return html;
+}
+
+/* ══════════════════════════════════════════════════════
    ADD DEAL MODAL
 ══════════════════════════════════════════════════════ */
 function renderAddDealModal() {
@@ -2660,9 +3046,9 @@ function initCRM() {
       if (!panel) return;
 
       // Build tabs
-      var tabs = ["overview", "timeline", "documents", "activity", "financials"];
-      var tabLabels = ["Overview", "Timeline", "Documents", "Activity", "Financials"];
-      var tabIcons = ["info", "calendar", "folder", "activity", "calculator"];
+      var tabs = ["scorecard", "overview", "timeline", "documents", "activity", "financials"];
+      var tabLabels = ["Scorecard", "Overview", "Timeline", "Documents", "Activity", "Financials"];
+      var tabIcons = ["bar-chart-2", "info", "calendar", "folder", "activity", "calculator"];
 
       var tabsHtml = '<div class="crm-detail-tabs">';
       for (var t = 0; t < tabs.length; t++) {
@@ -2676,7 +3062,9 @@ function initCRM() {
 
       // Get tab content from existing crm.js functions
       var contentHtml = '';
-      if (crmState.activeTab === "overview") {
+      if (crmState.activeTab === "scorecard") {
+        contentHtml = renderScorecardTab(deal);
+      } else if (crmState.activeTab === "overview") {
         contentHtml = renderOverviewTab(deal);
       } else if (crmState.activeTab === "timeline") {
         contentHtml = renderTimelineTab(deal);
