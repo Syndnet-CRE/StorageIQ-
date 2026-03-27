@@ -205,8 +205,10 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
 
 .crm-main {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .crm-board {
@@ -358,19 +360,416 @@ body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18)}
 }
 
 /* ══════════════════════════════════════════════════════
-   DETAIL PANEL
+   PIPELINE TABLE
 ══════════════════════════════════════════════════════ */
-.crm-detail {
-  width: 480px;
-  flex-shrink: 0;
+.pipeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-secondary);
-  border-left: 1px solid var(--border-subtle);
-  overflow-y: auto;
-  display: none;
 }
 
-.crm-detail.open {
-  display: block;
+.pipeline-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pipeline-kpis {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.pipeline-kpi {
+  text-align: right;
+}
+
+.pipeline-kpi-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+}
+
+.pipeline-kpi-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pipeline-kpi-value.green { color: var(--semantic-success); }
+
+.pipeline-table-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem 1.5rem;
+}
+
+.pipeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.pipeline-table thead tr {
+  background: var(--bg-tertiary);
+}
+
+.pipeline-table th {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.pipeline-table th.right { text-align: right; }
+
+.pipeline-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pipeline-table tbody tr:hover {
+  background: var(--bg-tertiary);
+}
+
+.pipeline-table tbody tr.active {
+  background: var(--accent-primaryMuted);
+}
+
+.pipeline-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.pipeline-table td.mono {
+  font-family: var(--font-mono);
+}
+
+.pipeline-table td.right { text-align: right; }
+
+.deal-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.deal-cell-priority {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.deal-cell-info {
+  min-width: 0;
+}
+
+.deal-cell-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deal-cell-location {
+  font-size: 0.65rem;
+  color: var(--text-quaternary);
+}
+
+.stage-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 1rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.action-btn {
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.35rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+}
+
+.action-btn.open {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.action-btn.open:hover {
+  background: var(--bg-elevated);
+}
+
+.action-btn.advance {
+  background: var(--accent-primaryMuted);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-primaryBorder);
+}
+
+.action-btn.advance:hover {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+/* ══════════════════════════════════════════════════════
+   DETAIL PANEL (slide-in)
+══════════════════════════════════════════════════════ */
+.detail-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 76%;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-subtle);
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.2);
+}
+
+.detail-panel.open {
+  transform: translateX(0);
+}
+
+/* Acquisition Timeline */
+.acq-timeline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 0.5rem;
+}
+
+.acq-timeline-node {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.acq-timeline-node:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: calc(50% + 14px);
+  right: calc(-50% + 14px);
+  height: 2px;
+  background: var(--border-default);
+}
+
+.acq-timeline-node.passed:not(:last-child)::after {
+  background: var(--semantic-success);
+}
+
+.acq-node-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.acq-node-dot i {
+  width: 12px;
+  height: 12px;
+  color: var(--text-quaternary);
+}
+
+.acq-timeline-node.passed .acq-node-dot {
+  background: var(--semantic-success);
+  border-color: var(--semantic-success);
+}
+
+.acq-timeline-node.passed .acq-node-dot i {
+  color: #fff;
+}
+
+.acq-timeline-node.current .acq-node-dot {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  animation: pulse-ring 1.5s infinite;
+}
+
+.acq-timeline-node.current .acq-node-dot i {
+  color: #fff;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(62,170,66,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(62,170,66,0); }
+}
+
+.acq-node-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  margin-top: 0.5rem;
+}
+
+.acq-timeline-node.passed .acq-node-label,
+.acq-timeline-node.current .acq-node-label {
+  color: var(--text-secondary);
+}
+
+.acq-node-days {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-quaternary);
+  margin-top: 0.15rem;
+}
+
+.acq-timeline-node.current .acq-node-days {
+  color: var(--accent-green);
+}
+
+/* KPI Strip */
+.detail-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.detail-kpi {
+  background: var(--bg-secondary);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.detail-kpi-label {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  margin-bottom: 0.2rem;
+}
+
+.detail-kpi-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detail-kpi-value.green { color: var(--semantic-success); }
+.detail-kpi-value.amber { color: var(--semantic-warning); }
+.detail-kpi-value.red { color: var(--semantic-error); }
+
+/* Hide old detail panel */
+.crm-detail {
+  display: none !important;
+}
+
+/* Detail Panel Header & Tabs */
+.crm-detail-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.crm-detail-title h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0;
+}
+
+.crm-detail-close {
+  background: transparent;
+  border: none;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 0.35rem;
+  transition: all 0.15s;
+}
+
+.crm-detail-close:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.crm-detail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 1.25rem;
+  background: var(--bg-secondary);
+}
+
+.crm-detail-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.crm-detail-tab i {
+  width: 14px;
+  height: 14px;
+}
+
+.crm-detail-tab:hover {
+  color: var(--text-tertiary);
+}
+
+.crm-detail-tab.active {
+  border-bottom-color: var(--accent-primary);
+  color: var(--accent-green);
+}
+
+.crm-detail-content {
+  padding: 1.25rem;
 }
 
 .detail-header {
@@ -1058,28 +1457,30 @@ body.light .field select {
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════ */
+@media (max-width: 1200px) {
+  .detail-panel {
+    width: 85%;
+  }
+}
+
 @media (max-width: 900px) {
   .crm-sidebar {
-    display: none;
+    width: 220px;
   }
 
-  .crm-detail {
-    position: fixed;
-    right: 0;
-    top: 60px;
-    height: calc(100vh - 60px);
+  .detail-panel {
     width: 100%;
-    max-width: 400px;
-    z-index: 150;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.3);
   }
 
-  .crm-board {
-    padding: 1rem;
+  .pipeline-kpis {
+    gap: 1rem;
   }
 
-  .board-column {
-    width: 260px;
+  .pipeline-table th:nth-child(4),
+  .pipeline-table th:nth-child(5),
+  .pipeline-table td:nth-child(4),
+  .pipeline-table td:nth-child(5) {
+    display: none;
   }
 }
 
@@ -1092,8 +1493,35 @@ body.light .field select {
     padding: 0.75rem 1rem;
   }
 
-  .crm-detail {
-    max-width: 100%;
+  .crm-sidebar {
+    display: none;
+  }
+
+  .pipeline-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .pipeline-kpis {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pipeline-table th:nth-child(6),
+  .pipeline-table th:nth-child(7),
+  .pipeline-table td:nth-child(6),
+  .pipeline-table td:nth-child(7) {
+    display: none;
+  }
+
+  .acq-timeline {
+    overflow-x: auto;
+    padding: 1rem;
+  }
+
+  .acq-timeline-node {
+    min-width: 70px;
   }
 }
 </style>
@@ -1106,15 +1534,37 @@ body.light .field select {
       <!-- Sidebar content rendered by JS -->
     </aside>
 
-    <main class="crm-main">
-      <div class="crm-board" id="crmBoard">
-        <!-- Board columns rendered by JS -->
+    <main class="crm-main" id="crmMain">
+      <div class="pipeline-header">
+        <div class="pipeline-title">Deal Pipeline</div>
+        <div class="pipeline-kpis" id="pipelineKpis">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="pipeline-table-wrap">
+        <table class="pipeline-table">
+          <thead>
+            <tr>
+              <th>Deal</th>
+              <th>Stage</th>
+              <th class="right">Asking Price</th>
+              <th class="right">NOI</th>
+              <th class="right">Cap Rate</th>
+              <th class="right">Days in Stage</th>
+              <th>Last Activity</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pipelineTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="detail-panel" id="detailPanel">
+        <!-- Rendered by JS when deal is opened -->
       </div>
     </main>
-
-    <aside class="crm-detail" id="crmDetail">
-      <!-- Detail panel rendered by JS -->
-    </aside>
   </div>
 
   <div class="modal-overlay" id="modalOverlay">
@@ -1127,6 +1577,292 @@ body.light .field select {
   <script src="js/deals.js"></script>
   <script src="js/crm.js"></script>
   <script>
+    /* ══════════════════════════════════════════════════════
+       PIPELINE TABLE FUNCTIONS
+    ══════════════════════════════════════════════════════ */
+    var PIPELINE_STAGES = [
+      { id: "prospecting", label: "Prospecting", color: "#0A84FF" },
+      { id: "outreach", label: "Outreach", color: "#5AC8FA" },
+      { id: "under_loi", label: "LOI", color: "#FFD60A" },
+      { id: "under_contract", label: "Under Contract", color: "#FF9F0A" },
+      { id: "closing", label: "Closing", color: "#34C759" }
+    ];
+
+    function getStageIndex(stageId) {
+      for (var i = 0; i < PIPELINE_STAGES.length; i++) {
+        if (PIPELINE_STAGES[i].id === stageId) return i;
+      }
+      return 0;
+    }
+
+    function getPipelineStageLabel(stageId) {
+      for (var i = 0; i < PIPELINE_STAGES.length; i++) {
+        if (PIPELINE_STAGES[i].id === stageId) return PIPELINE_STAGES[i].label;
+      }
+      return stageId;
+    }
+
+    function getPipelineStageColor(stageId) {
+      for (var i = 0; i < PIPELINE_STAGES.length; i++) {
+        if (PIPELINE_STAGES[i].id === stageId) return PIPELINE_STAGES[i].color;
+      }
+      return "#888";
+    }
+
+    function renderTable() {
+      var deals = dealsGetAll();
+      var tbody = document.getElementById("pipelineTableBody");
+      var kpisDiv = document.getElementById("pipelineKpis");
+      if (!tbody) return;
+
+      // Calculate KPIs
+      var activeDeals = deals.filter(function(d) { return d.stage !== "dead" && d.stage !== "closed"; });
+      var totalPipeline = 0;
+      var avgPrice = 0;
+      for (var i = 0; i < activeDeals.length; i++) {
+        totalPipeline += parseFloat(activeDeals[i].askingPrice) || 0;
+      }
+      if (activeDeals.length > 0) {
+        avgPrice = totalPipeline / activeDeals.length;
+      }
+
+      // Render KPIs
+      if (kpisDiv) {
+        kpisDiv.innerHTML =
+          '<div class="pipeline-kpi">' +
+            '<div class="pipeline-kpi-label">Total Pipeline</div>' +
+            '<div class="pipeline-kpi-value green">' + formatCurrency(totalPipeline) + '</div>' +
+          '</div>' +
+          '<div class="pipeline-kpi">' +
+            '<div class="pipeline-kpi-label">Active Deals</div>' +
+            '<div class="pipeline-kpi-value">' + activeDeals.length + '</div>' +
+          '</div>' +
+          '<div class="pipeline-kpi">' +
+            '<div class="pipeline-kpi-label">Avg Price</div>' +
+            '<div class="pipeline-kpi-value">' + formatCurrency(avgPrice) + '</div>' +
+          '</div>';
+      }
+
+      // Render table rows
+      var html = "";
+      for (var j = 0; j < deals.length; j++) {
+        var deal = deals[j];
+        if (deal.stage === "dead") continue;
+
+        var priorityColor = getPriorityColor(deal.priority);
+        var stageColor = getPipelineStageColor(deal.stage);
+        var daysInStage = getDaysInStage(deal);
+        var lastActivity = deal.activity && deal.activity.length > 0 ? deal.activity[0] : null;
+        var lastActivityText = lastActivity ? formatDate(lastActivity.timestamp) : "—";
+        var isSelected = crmState.selectedDealId === deal.id;
+
+        // Estimate NOI and cap rate (placeholder since we don't have full financials)
+        var noi = deal.noi || "—";
+        var capRate = deal.capRate || "—";
+
+        html += '<tr class="' + (isSelected ? 'active' : '') + '" onclick="openDeal(\'' + deal.id + '\')">' +
+          '<td>' +
+            '<div class="deal-cell">' +
+              '<div class="deal-cell-priority" style="background:' + priorityColor + '"></div>' +
+              '<div class="deal-cell-info">' +
+                '<div class="deal-cell-name">' + (deal.propertyName || "Untitled") + '</div>' +
+                '<div class="deal-cell-location">' + (deal.city || "") + (deal.city && deal.state ? ", " : "") + (deal.state || "") + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+          '<td><span class="stage-badge" style="background:' + stageColor + '20;color:' + stageColor + '">' + getPipelineStageLabel(deal.stage) + '</span></td>' +
+          '<td class="mono right">' + formatCurrency(deal.askingPrice) + '</td>' +
+          '<td class="mono right">' + noi + '</td>' +
+          '<td class="mono right">' + capRate + '</td>' +
+          '<td class="mono right">' + daysInStage + 'd</td>' +
+          '<td>' + lastActivityText + '</td>' +
+          '<td>' +
+            '<div class="actions-cell">' +
+              '<button class="action-btn open" onclick="event.stopPropagation();openDeal(\'' + deal.id + '\')">Open</button>' +
+              '<button class="action-btn advance" onclick="event.stopPropagation();quickAdvance(\'' + deal.id + '\')"><i data-lucide="chevron-right" style="width:12px;height:12px"></i></button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }
+
+      tbody.innerHTML = html;
+      initLucide();
+    }
+
+    function quickAdvance(id) {
+      var deal = dealsGetById(id);
+      if (!deal) return;
+
+      var currentIndex = getStageIndex(deal.stage);
+      if (currentIndex < PIPELINE_STAGES.length - 1) {
+        var nextStage = PIPELINE_STAGES[currentIndex + 1];
+        deal.stage = nextStage.id;
+        deal.substage = "";
+        dealsUpdate(id, { stage: nextStage.id, substage: "" });
+        dealsAddActivity(id, "stage_change", "Advanced to " + nextStage.label);
+        renderTable();
+        renderSidebar();
+
+        // Update detail panel if open
+        if (crmState.selectedDealId === id) {
+          renderDetailPanelContent(deal);
+        }
+      }
+    }
+
+    function openDeal(id) {
+      crmState.selectedDealId = id;
+      crmState.activeTab = "overview";
+      var deal = dealsGetById(id);
+      if (!deal) return;
+
+      renderTable();
+      renderDetailPanelContent(deal);
+
+      var panel = document.getElementById("detailPanel");
+      if (panel) {
+        panel.classList.add("open");
+      }
+    }
+
+    function closeDetailPanel() {
+      crmState.selectedDealId = null;
+      var panel = document.getElementById("detailPanel");
+      if (panel) {
+        panel.classList.remove("open");
+      }
+      renderTable();
+    }
+
+    function renderAcqTimeline(deal) {
+      var currentIndex = getStageIndex(deal.stage);
+      var html = '<div class="acq-timeline">';
+
+      for (var i = 0; i < PIPELINE_STAGES.length; i++) {
+        var stage = PIPELINE_STAGES[i];
+        var isPassed = i < currentIndex;
+        var isCurrent = i === currentIndex;
+        var cls = isPassed ? "passed" : (isCurrent ? "current" : "");
+
+        // Calculate days in this stage
+        var daysText = "—";
+        if (isPassed || isCurrent) {
+          if (isCurrent) {
+            daysText = getDaysInStage(deal) + "d";
+          } else {
+            // For passed stages, estimate based on activity
+            daysText = "done";
+          }
+        }
+
+        var icon = isPassed ? "check" : (isCurrent ? "circle-dot" : "circle");
+
+        html += '<div class="acq-timeline-node ' + cls + '">' +
+          '<div class="acq-node-dot"><i data-lucide="' + icon + '"></i></div>' +
+          '<div class="acq-node-label">' + stage.label + '</div>' +
+          '<div class="acq-node-days">' + daysText + '</div>' +
+        '</div>';
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderDetailKpiStrip(deal) {
+      var askingPrice = formatCurrency(deal.askingPrice);
+      var noi = deal.noi || "—";
+      var capRate = deal.capRate || "—";
+      var dscr = deal.dscr || "—";
+      var coc = deal.coc || "—";
+
+      return '<div class="detail-kpi-strip">' +
+        '<div class="detail-kpi">' +
+          '<div class="detail-kpi-label">Asking Price</div>' +
+          '<div class="detail-kpi-value">' + askingPrice + '</div>' +
+        '</div>' +
+        '<div class="detail-kpi">' +
+          '<div class="detail-kpi-label">NOI</div>' +
+          '<div class="detail-kpi-value">' + noi + '</div>' +
+        '</div>' +
+        '<div class="detail-kpi">' +
+          '<div class="detail-kpi-label">Cap Rate</div>' +
+          '<div class="detail-kpi-value">' + capRate + '</div>' +
+        '</div>' +
+        '<div class="detail-kpi">' +
+          '<div class="detail-kpi-label">DSCR</div>' +
+          '<div class="detail-kpi-value">' + dscr + '</div>' +
+        '</div>' +
+        '<div class="detail-kpi">' +
+          '<div class="detail-kpi-label">CoC Return</div>' +
+          '<div class="detail-kpi-value">' + coc + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderDetailPanelContent(deal) {
+      var panel = document.getElementById("detailPanel");
+      if (!panel) return;
+
+      // Build tabs
+      var tabs = ["overview", "timeline", "documents", "activity", "financials"];
+      var tabLabels = ["Overview", "Timeline", "Documents", "Activity", "Financials"];
+      var tabIcons = ["info", "calendar", "folder", "activity", "calculator"];
+
+      var tabsHtml = '<div class="crm-detail-tabs">';
+      for (var t = 0; t < tabs.length; t++) {
+        var isActive = crmState.activeTab === tabs[t];
+        tabsHtml += '<button class="crm-detail-tab' + (isActive ? ' active' : '') + '" onclick="switchDetailTab(\'' + tabs[t] + '\')">' +
+          '<i data-lucide="' + tabIcons[t] + '"></i>' +
+          '<span>' + tabLabels[t] + '</span>' +
+        '</button>';
+      }
+      tabsHtml += '</div>';
+
+      // Get tab content from existing crm.js functions
+      var contentHtml = '';
+      if (crmState.activeTab === "overview") {
+        contentHtml = renderOverviewTab(deal);
+      } else if (crmState.activeTab === "timeline") {
+        contentHtml = renderTimelineTab(deal);
+      } else if (crmState.activeTab === "documents") {
+        contentHtml = renderDocumentsTab(deal);
+      } else if (crmState.activeTab === "activity") {
+        contentHtml = renderActivityTab(deal);
+      } else if (crmState.activeTab === "financials") {
+        contentHtml = renderFinancialsTab(deal);
+      }
+
+      panel.innerHTML =
+        '<div class="crm-detail-header">' +
+          '<div class="crm-detail-title">' +
+            '<h2>' + (deal.propertyName || "Untitled Deal") + '</h2>' +
+            '<p style="font-size:0.7rem;color:var(--text-quaternary);margin-top:0.25rem">' +
+              (deal.address || "") + (deal.address && deal.city ? ", " : "") + (deal.city || "") + (deal.city && deal.state ? ", " : "") + (deal.state || "") +
+            '</p>' +
+          '</div>' +
+          '<button class="crm-detail-close" onclick="closeDetailPanel()">' +
+            '<i data-lucide="x"></i>' +
+          '</button>' +
+        '</div>' +
+        renderAcqTimeline(deal) +
+        renderDetailKpiStrip(deal) +
+        tabsHtml +
+        '<div class="crm-detail-content">' + contentHtml + '</div>';
+
+      initLucide();
+    }
+
+    function switchDetailTab(tab) {
+      crmState.activeTab = tab;
+      var deal = dealsGetById(crmState.selectedDealId);
+      if (deal) {
+        renderDetailPanelContent(deal);
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       INIT
+    ══════════════════════════════════════════════════════ */
     document.addEventListener("DOMContentLoaded", function() {
       // Restore theme
       try {
@@ -1143,8 +1879,11 @@ body.light .field select {
       // Init Lucide
       initLucide();
 
-      // Init CRM
+      // Init CRM (sidebar and board)
       initCRM();
+
+      // Render pipeline table
+      renderTable();
     });
   </script>
 </body>
