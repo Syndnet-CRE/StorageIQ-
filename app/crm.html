@@ -1573,9 +1573,865 @@ body.light .field select {
     </div>
   </div>
 
-  <script src="js/shared.js"></script>
-  <script src="js/deals.js"></script>
-  <script src="js/crm.js"></script>
+  <script>
+/* ══════════════════════════════════════════════════════
+   THEME SYSTEM
+══════════════════════════════════════════════════════ */
+const darkTheme = {
+  bg: {
+    primary:   "#1C1C1E",
+    secondary: "#2C2C2E",
+    tertiary:  "#3A3A3C",
+    elevated:  "#48484A",
+  },
+  accent: {
+    primary:       "#3EAA42",
+    primaryHover:  "#359438",
+    primaryMuted:  "rgba(62, 170, 66, 0.12)",
+    primaryBorder: "rgba(62, 170, 66, 0.30)",
+    green:         "#34C759",
+    greenHover:    "#2DB84E",
+    greenMuted:    "rgba(52, 199, 89, 0.12)",
+  },
+  text: {
+    primary:    "rgba(255, 255, 255, 1.0)",
+    secondary:  "rgba(255, 255, 255, 0.80)",
+    tertiary:   "rgba(255, 255, 255, 0.55)",
+    quaternary: "rgba(255, 255, 255, 0.35)",
+  },
+  border: {
+    subtle:  "rgba(255, 255, 255, 0.08)",
+    default: "rgba(255, 255, 255, 0.12)",
+    strong:  "rgba(255, 255, 255, 0.20)",
+  },
+  semantic: {
+    success: "#34C759",
+    warning: "#FFD60A",
+    error:   "#FF453A",
+    info:    "#0A84FF",
+  },
+  charts: {
+    traffic:  ["#34C759", "#FFD60A", "#FF9F0A", "#FF453A"],
+    spectrum: ["#5AC8FA", "#0A84FF", "#BF5AF2", "#FF375F"],
+    neon:     ["#34C759", "#FFD60A", "#FF6961", "var(--semantic-info)", "#BF5AF2", "#0A84FF"],
+  },
+  font: {
+    display: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
+    mono:    "'JetBrains Mono', monospace",
+  },
+};
+
+const lightTheme = {
+  bg: {
+    primary:   "#FFFFFF",
+    secondary: "#F2F2F7",
+    tertiary:  "#E5E5EA",
+    elevated:  "#D1D1D6",
+  },
+  accent: {
+    primary:       "#2D8F32",
+    primaryHover:  "#267D2B",
+    primaryMuted:  "rgba(45, 143, 50, 0.08)",
+    primaryBorder: "rgba(45, 143, 50, 0.20)",
+    green:         "#28A745",
+    greenHover:    "#218838",
+    greenMuted:    "rgba(40, 167, 69, 0.08)",
+  },
+  text: {
+    primary:    "rgba(0, 0, 0, 0.92)",
+    secondary:  "rgba(0, 0, 0, 0.75)",
+    tertiary:   "rgba(0, 0, 0, 0.55)",
+    quaternary: "rgba(0, 0, 0, 0.35)",
+  },
+  border: {
+    subtle:  "rgba(0, 0, 0, 0.06)",
+    default: "rgba(0, 0, 0, 0.10)",
+    strong:  "rgba(0, 0, 0, 0.18)",
+  },
+  semantic: {
+    success: "#28A745",
+    warning: "#F5A623",
+    error:   "#DC3545",
+    info:    "#007AFF",
+  },
+  charts: {
+    traffic:  ["#28A745", "#F5A623", "#E8772E", "#DC3545"],
+    spectrum: ["#32ADE6", "#007AFF", "#AF52DE", "#E8375F"],
+    neon:     ["#28A745", "#F5A623", "#E8575A", "var(--semantic-info)", "#AF52DE", "#007AFF"],
+  },
+  font: {
+    display: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
+    mono:    "'JetBrains Mono', monospace",
+  },
+};
+
+function applyTheme(t) {
+  var r = document.documentElement.style;
+  r.setProperty("--bg-primary",   t.bg.primary);
+  r.setProperty("--bg-secondary", t.bg.secondary);
+  r.setProperty("--bg-tertiary",  t.bg.tertiary);
+  r.setProperty("--bg-elevated",  t.bg.elevated);
+  r.setProperty("--accent-primary",       t.accent.primary);
+  r.setProperty("--accent-primaryHover",  t.accent.primaryHover);
+  r.setProperty("--accent-primaryMuted",  t.accent.primaryMuted);
+  r.setProperty("--accent-primaryBorder", t.accent.primaryBorder);
+  r.setProperty("--accent-green",         t.accent.green);
+  r.setProperty("--accent-greenHover",    t.accent.greenHover);
+  r.setProperty("--accent-greenMuted",    t.accent.greenMuted);
+  r.setProperty("--text-primary",    t.text.primary);
+  r.setProperty("--text-secondary",  t.text.secondary);
+  r.setProperty("--text-tertiary",   t.text.tertiary);
+  r.setProperty("--text-quaternary", t.text.quaternary);
+  r.setProperty("--border-subtle",  t.border.subtle);
+  r.setProperty("--border-default", t.border.default);
+  r.setProperty("--border-strong",  t.border.strong);
+  r.setProperty("--semantic-success", t.semantic.success);
+  r.setProperty("--semantic-warning", t.semantic.warning);
+  r.setProperty("--semantic-error",   t.semantic.error);
+  r.setProperty("--semantic-info",    t.semantic.info);
+
+  document.querySelectorAll("[data-grad-btn]").forEach(function(el) {
+    el.style.background = "linear-gradient(135deg, " + t.accent.primaryHover + ", " + t.accent.primary + ")";
+  });
+
+  var navIcon = document.querySelector(".nav-icon");
+  if (navIcon) {
+    navIcon.style.background = "linear-gradient(135deg, " + t.accent.primaryHover + ", " + t.accent.primary + ")";
+    navIcon.style.boxShadow  = "0 0 16px " + t.accent.primaryMuted;
+  }
+
+  var nav = document.querySelector(".topnav");
+  if (nav) {
+    var isDark = (t === darkTheme);
+    nav.style.background = isDark ? "rgba(28,28,30,0.92)" : "rgba(255,255,255,0.92)";
+    nav.style.borderBottomColor = t.border.subtle;
+  }
+
+  var toggleBtn = document.getElementById("themeToggleBtn");
+  if (toggleBtn) {
+    toggleBtn.style.background   = t.bg.secondary;
+    toggleBtn.style.borderColor  = t.border.default;
+    toggleBtn.style.color        = t.text.secondary;
+  }
+
+  document.documentElement.setAttribute("data-theme", t === darkTheme ? "dark" : "light");
+
+  if (t === darkTheme) {
+    document.body.classList.remove("light");
+  } else {
+    document.body.classList.add("light");
+  }
+}
+
+var _currentMode = "dark";
+
+function getTheme() {
+  return _currentMode === "dark" ? darkTheme : lightTheme;
+}
+
+function toggleAppTheme() {
+  _currentMode = _currentMode === "dark" ? "light" : "dark";
+  var t = getTheme();
+  applyTheme(t);
+  updateToggleBtn();
+  try { localStorage.setItem("parcyl-theme", _currentMode); } catch(e) {}
+}
+
+function updateToggleBtn() {
+  var icon  = document.getElementById("themeIcon");
+  var label = document.getElementById("themeLabel");
+  if (!icon || !label) return;
+  if (_currentMode === "dark") {
+    label.textContent = "Light";
+    icon.setAttribute("data-lucide", "sun");
+  } else {
+    label.textContent = "Dark";
+    icon.setAttribute("data-lucide", "moon");
+  }
+  if (window.lucide) lucide.createIcons({ icons: lucide.icons });
+}
+
+/* ══════════════════════════════════════════════════════
+   LUCIDE INIT
+══════════════════════════════════════════════════════ */
+function initLucide() {
+  if (window.lucide) lucide.createIcons({ icons: lucide.icons });
+}
+
+/* ══════════════════════════════════════════════════════
+   NAV RENDER
+══════════════════════════════════════════════════════ */
+function renderNav(activePage, btnLabel, btnAction) {
+  var pages = [
+    { id:"dashboard", label:"Dashboard", href:"dashboard.html" },
+    { id:"underwrite", label:"Underwrite", href:"index.html" },
+    { id:"crm", label:"Deal Room", href:"crm.html" },
+    { id:"market", label:"Market Map", href:"market.html" },
+    { id:"agents", label:"AI Agents", href:"agents.html" }
+  ];
+
+  var navEl = document.getElementById("appNav");
+  if (!navEl) return;
+
+  var html = '<nav class="topnav">' +
+    '<div class="nav-brand">' +
+      '<div class="nav-icon">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">' +
+          '<rect x="3" y="3" width="7" height="9" rx="1"/>' +
+          '<rect x="14" y="3" width="7" height="5" rx="1"/>' +
+          '<rect x="14" y="12" width="7" height="9" rx="1"/>' +
+          '<rect x="3" y="16" width="7" height="5" rx="1"/>' +
+        '</svg>' +
+      '</div>' +
+      '<span class="nav-wordmark">StorageIQ<sup>Beta</sup></span>' +
+    '</div>' +
+    '<div class="nav-steps">';
+
+  for (var i = 0; i < pages.length; i++) {
+    var p = pages[i];
+    var isActive = p.id === activePage;
+    html += '<a href="' + p.href + '" class="nav-step' + (isActive ? ' active' : '') + '">' +
+      '<span class="nav-step-num">' + (i + 1) + '</span>' +
+      '<span>' + p.label + '</span>' +
+    '</a>';
+    if (i < pages.length - 1) {
+      html += '<div class="nav-step-sep"></div>';
+    }
+  }
+
+  html += '</div>' +
+    '<div style="display:flex;align-items:center;gap:0.75rem;">' +
+      '<button id="themeToggleBtn" onclick="toggleAppTheme()" class="theme-toggle">' +
+        '<i id="themeIcon" data-lucide="sun"></i>' +
+        '<span id="themeLabel">Light</span>' +
+      '</button>' +
+      '<button class="btn-primary" onclick="' + (btnAction || '') + '">' + (btnLabel || 'Action') + '</button>' +
+    '</div>' +
+  '</nav>';
+
+  navEl.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════
+   DATA LAYER — localStorage
+══════════════════════════════════════════════════════ */
+var DEALS_KEY = "storageiq-deals";
+
+function uid() {
+  return 'deal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function dealsGetAll() {
+  try {
+    var data = localStorage.getItem(DEALS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch(e) { return []; }
+}
+
+function dealsSaveAll(deals) {
+  try {
+    localStorage.setItem(DEALS_KEY, JSON.stringify(deals));
+  } catch(e) {}
+}
+
+function dealsGetById(id) {
+  var deals = dealsGetAll();
+  for (var i = 0; i < deals.length; i++) {
+    if (deals[i].id === id) return deals[i];
+  }
+  return null;
+}
+
+function dealsSave(deal) {
+  var deals = dealsGetAll();
+  var found = false;
+  for (var i = 0; i < deals.length; i++) {
+    if (deals[i].id === deal.id) {
+      deals[i] = deal;
+      found = true;
+      break;
+    }
+  }
+  if (!found) deals.push(deal);
+  dealsSaveAll(deals);
+}
+
+function dealsCreate(partial) {
+  var now = new Date().toISOString();
+  var deal = {
+    id: uid(),
+    propertyName: partial.propertyName || "",
+    address: partial.address || "",
+    city: partial.city || "",
+    state: partial.state || "",
+    askingPrice: partial.askingPrice || 0,
+    priority: partial.priority || "medium",
+    stage: partial.stage || "prospecting",
+    substage: partial.substage || "",
+    broker: partial.broker || { name: "", phone: "", email: "" },
+    seller: partial.seller || { name: "", phone: "" },
+    notes: partial.notes || "",
+    createdAt: now,
+    updatedAt: now,
+    stageEnteredAt: now,
+    activity: [],
+    documents: [],
+    financials: {}
+  };
+  dealsSave(deal);
+  return deal;
+}
+
+function dealsUpdate(id, partial) {
+  var deal = dealsGetById(id);
+  if (!deal) return null;
+  for (var key in partial) {
+    if (partial.hasOwnProperty(key)) {
+      deal[key] = partial[key];
+    }
+  }
+  deal.updatedAt = new Date().toISOString();
+  if (partial.stage && partial.stage !== deal.stage) {
+    deal.stageEnteredAt = deal.updatedAt;
+  }
+  dealsSave(deal);
+  return deal;
+}
+
+function dealsDelete(id) {
+  var deals = dealsGetAll();
+  var newDeals = [];
+  for (var i = 0; i < deals.length; i++) {
+    if (deals[i].id !== id) newDeals.push(deals[i]);
+  }
+  dealsSaveAll(newDeals);
+}
+
+function dealsAddActivity(id, type, text) {
+  var deal = dealsGetById(id);
+  if (!deal) return;
+  if (!deal.activity) deal.activity = [];
+  deal.activity.unshift({
+    id: uid(),
+    type: type,
+    text: text,
+    timestamp: new Date().toISOString()
+  });
+  dealsSave(deal);
+}
+
+/* ══════════════════════════════════════════════════════
+   CRM STATE
+══════════════════════════════════════════════════════ */
+var crmState = { selectedDealId: null, activeTab: "overview" };
+
+/* ══════════════════════════════════════════════════════
+   SEED DEALS
+══════════════════════════════════════════════════════ */
+function seedDeals() {
+  var existing = dealsGetAll();
+  if (existing.length > 0) return;
+
+  var now = new Date().toISOString();
+  var seedData = [
+    {
+      id: uid(),
+      propertyName: "Lakewood Storage",
+      address: "4521 Lakewood Blvd",
+      city: "Austin",
+      state: "TX",
+      askingPrice: 3200000,
+      priority: "high",
+      stage: "under_loi",
+      substage: "",
+      broker: { name: "Mike Thompson", phone: "(512) 555-1234", email: "mike@cbreaustin.com" },
+      seller: { name: "Lakewood Partners LLC", phone: "(512) 555-9876" },
+      notes: "Strong location near UT campus. Owner motivated due to retirement.",
+      createdAt: now,
+      updatedAt: now,
+      stageEnteredAt: now,
+      activity: [
+        { id: uid(), type: "stage_change", text: "Advanced to LOI stage", timestamp: now },
+        { id: uid(), type: "call", text: "Spoke with seller about timeline", timestamp: now }
+      ],
+      documents: [],
+      financials: {}
+    },
+    {
+      id: uid(),
+      propertyName: "Sunbelt Self Storage",
+      address: "8900 E McDowell Rd",
+      city: "Phoenix",
+      state: "AZ",
+      askingPrice: 1850000,
+      priority: "medium",
+      stage: "prospecting",
+      substage: "",
+      broker: { name: "Sarah Chen", phone: "(480) 555-2345", email: "schen@marcusmillichap.com" },
+      seller: { name: "Desert Holdings Inc", phone: "(480) 555-8765" },
+      notes: "Class B facility with expansion potential. 2 adjacent parcels available.",
+      createdAt: now,
+      updatedAt: now,
+      stageEnteredAt: now,
+      activity: [
+        { id: uid(), type: "note", text: "Initial property review completed", timestamp: now }
+      ],
+      documents: [],
+      financials: {}
+    },
+    {
+      id: uid(),
+      propertyName: "Piedmont Mini Storage",
+      address: "1250 Independence Blvd",
+      city: "Charlotte",
+      state: "NC",
+      askingPrice: 5100000,
+      priority: "high",
+      stage: "under_contract",
+      substage: "",
+      broker: { name: "David Williams", phone: "(704) 555-3456", email: "dwilliams@jll.com" },
+      seller: { name: "Carolina Storage REIT", phone: "(704) 555-7654" },
+      notes: "Premium asset in high-growth submarket. 94% occupancy.",
+      createdAt: now,
+      updatedAt: now,
+      stageEnteredAt: now,
+      activity: [
+        { id: uid(), type: "stage_change", text: "Contract signed, entering due diligence", timestamp: now },
+        { id: uid(), type: "document", text: "PSA uploaded to deal room", timestamp: now }
+      ],
+      documents: [],
+      financials: {}
+    }
+  ];
+
+  dealsSaveAll(seedData);
+}
+
+/* ══════════════════════════════════════════════════════
+   HELPER FUNCTIONS
+══════════════════════════════════════════════════════ */
+function formatCurrency(n) {
+  if (n === null || n === undefined || n === "") return "—";
+  var num = parseFloat(n);
+  if (isNaN(num)) return "—";
+  if (num >= 1000000) {
+    return "$" + (num / 1000000).toFixed(2) + "m";
+  }
+  return "$" + num.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  var d = new Date(iso);
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return months[d.getMonth()] + " " + d.getDate();
+}
+
+function getDaysInStage(deal) {
+  if (!deal.stageEnteredAt) return 0;
+  return Math.floor((Date.now() - new Date(deal.stageEnteredAt).getTime()) / 86400000);
+}
+
+function getPriorityColor(p) {
+  if (p === "high") return "#FF453A";
+  if (p === "medium") return "#FFD60A";
+  return "#34C759";
+}
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR RENDER
+══════════════════════════════════════════════════════ */
+function renderSidebar() {
+  var sidebar = document.getElementById("crmSidebar");
+  if (!sidebar) return;
+
+  var deals = dealsGetAll();
+  var activeDeals = deals.filter(function(d) { return d.stage !== "dead"; });
+  var totalPipeline = 0;
+  var avgPrice = 0;
+  for (var i = 0; i < activeDeals.length; i++) {
+    totalPipeline += parseFloat(activeDeals[i].askingPrice) || 0;
+  }
+  if (activeDeals.length > 0) {
+    avgPrice = totalPipeline / activeDeals.length;
+  }
+
+  // Count by stage
+  var stageCounts = {};
+  var stages = ["prospecting", "outreach", "under_loi", "under_contract", "closing"];
+  for (var s = 0; s < stages.length; s++) {
+    stageCounts[stages[s]] = 0;
+  }
+  for (var j = 0; j < deals.length; j++) {
+    if (stageCounts.hasOwnProperty(deals[j].stage)) {
+      stageCounts[deals[j].stage]++;
+    }
+  }
+
+  var maxCount = 1;
+  for (var k in stageCounts) {
+    if (stageCounts[k] > maxCount) maxCount = stageCounts[k];
+  }
+
+  var html = '<div class="sidebar-search">' +
+    '<input type="text" placeholder="Search deals..." oninput="filterDeals(this.value)">' +
+  '</div>' +
+  '<div class="sidebar-stats">' +
+    '<div class="stat-card">' +
+      '<div class="stat-label">Total Deals</div>' +
+      '<div class="stat-value">' + deals.length + '</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-label">Active</div>' +
+      '<div class="stat-value blue">' + activeDeals.length + '</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-label">Pipeline</div>' +
+      '<div class="stat-value green">' + formatCurrency(totalPipeline) + '</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-label">Avg Price</div>' +
+      '<div class="stat-value">' + formatCurrency(avgPrice) + '</div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="pipeline-funnel">' +
+    '<div class="funnel-title">Pipeline by Stage</div>';
+
+  var stageLabels = {
+    prospecting: "Prospecting",
+    outreach: "Outreach",
+    under_loi: "LOI",
+    under_contract: "Contract",
+    closing: "Closing"
+  };
+
+  for (var m = 0; m < stages.length; m++) {
+    var stg = stages[m];
+    var cnt = stageCounts[stg];
+    var pct = (cnt / maxCount) * 100;
+    html += '<div class="funnel-row" onclick="filterByStage(\'' + stg + '\')">' +
+      '<div class="funnel-label">' + stageLabels[stg] + '</div>' +
+      '<div class="funnel-bar"><div class="funnel-bar-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="funnel-count">' + cnt + '</div>' +
+    '</div>';
+  }
+
+  html += '</div>';
+  sidebar.innerHTML = html;
+}
+
+function filterDeals(query) {
+  // Placeholder for search functionality
+  console.log("Search:", query);
+}
+
+function filterByStage(stage) {
+  // Placeholder for stage filter
+  console.log("Filter by stage:", stage);
+}
+
+/* ══════════════════════════════════════════════════════
+   TAB RENDER FUNCTIONS
+══════════════════════════════════════════════════════ */
+function renderOverviewTab(deal) {
+  var priorityOptions = '<option value="high"' + (deal.priority === "high" ? " selected" : "") + '>High</option>' +
+    '<option value="medium"' + (deal.priority === "medium" ? " selected" : "") + '>Medium</option>' +
+    '<option value="low"' + (deal.priority === "low" ? " selected" : "") + '>Low</option>';
+
+  var stageOptions = '';
+  var stageList = [
+    { id: "prospecting", label: "Prospecting" },
+    { id: "outreach", label: "Outreach" },
+    { id: "under_loi", label: "Under LOI" },
+    { id: "under_contract", label: "Under Contract" },
+    { id: "closing", label: "Closing" }
+  ];
+  for (var i = 0; i < stageList.length; i++) {
+    var s = stageList[i];
+    stageOptions += '<option value="' + s.id + '"' + (deal.stage === s.id ? " selected" : "") + '>' + s.label + '</option>';
+  }
+
+  return '<div class="detail-section">' +
+    '<div class="detail-section-title">Property Information</div>' +
+    '<div class="fg2" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>Property Name</label><input type="text" id="editPropName" value="' + (deal.propertyName || "") + '"></div>' +
+      '<div class="field"><label>Address</label><input type="text" id="editAddress" value="' + (deal.address || "") + '"></div>' +
+    '</div>' +
+    '<div class="fg3" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>City</label><input type="text" id="editCity" value="' + (deal.city || "") + '"></div>' +
+      '<div class="field"><label>State</label><input type="text" id="editState" value="' + (deal.state || "") + '"></div>' +
+      '<div class="field"><label>Asking Price</label><input type="text" id="editPrice" value="' + (deal.askingPrice || "") + '"></div>' +
+    '</div>' +
+    '<div class="fg2" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>Priority</label><select id="editPriority">' + priorityOptions + '</select></div>' +
+      '<div class="field"><label>Stage</label><select id="editStage">' + stageOptions + '</select></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="detail-section">' +
+    '<div class="detail-section-title">Broker Contact</div>' +
+    '<div class="fg3" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>Name</label><input type="text" id="editBrokerName" value="' + (deal.broker?.name || "") + '"></div>' +
+      '<div class="field"><label>Phone</label><input type="text" id="editBrokerPhone" value="' + (deal.broker?.phone || "") + '"></div>' +
+      '<div class="field"><label>Email</label><input type="text" id="editBrokerEmail" value="' + (deal.broker?.email || "") + '"></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="detail-section">' +
+    '<div class="detail-section-title">Seller Contact</div>' +
+    '<div class="fg2" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>Name</label><input type="text" id="editSellerName" value="' + (deal.seller?.name || "") + '"></div>' +
+      '<div class="field"><label>Phone</label><input type="text" id="editSellerPhone" value="' + (deal.seller?.phone || "") + '"></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="detail-section">' +
+    '<div class="detail-section-title">Notes</div>' +
+    '<div class="field"><textarea id="editNotes" rows="4">' + (deal.notes || "") + '</textarea></div>' +
+  '</div>' +
+  '<div style="padding-top:1rem;">' +
+    '<button class="btn-save" onclick="saveOverviewChanges()">Save Changes</button>' +
+  '</div>';
+}
+
+function saveOverviewChanges() {
+  var deal = dealsGetById(crmState.selectedDealId);
+  if (!deal) return;
+
+  var updates = {
+    propertyName: document.getElementById("editPropName")?.value || "",
+    address: document.getElementById("editAddress")?.value || "",
+    city: document.getElementById("editCity")?.value || "",
+    state: document.getElementById("editState")?.value || "",
+    askingPrice: parseFloat(document.getElementById("editPrice")?.value) || 0,
+    priority: document.getElementById("editPriority")?.value || "medium",
+    stage: document.getElementById("editStage")?.value || "prospecting",
+    broker: {
+      name: document.getElementById("editBrokerName")?.value || "",
+      phone: document.getElementById("editBrokerPhone")?.value || "",
+      email: document.getElementById("editBrokerEmail")?.value || ""
+    },
+    seller: {
+      name: document.getElementById("editSellerName")?.value || "",
+      phone: document.getElementById("editSellerPhone")?.value || ""
+    },
+    notes: document.getElementById("editNotes")?.value || ""
+  };
+
+  dealsUpdate(crmState.selectedDealId, updates);
+  renderTable();
+  renderSidebar();
+
+  var updatedDeal = dealsGetById(crmState.selectedDealId);
+  if (updatedDeal) renderDetailPanelContent(updatedDeal);
+}
+
+function renderTimelineTab(deal) {
+  if (!deal.activity || deal.activity.length === 0) {
+    return '<div class="empty-state">' +
+      '<div class="empty-state-icon"><i data-lucide="calendar" style="width:48px;height:48px"></i></div>' +
+      '<div class="empty-state-text">No timeline events yet</div>' +
+    '</div>';
+  }
+
+  var html = '<div class="timeline">';
+  for (var i = 0; i < deal.activity.length; i++) {
+    var act = deal.activity[i];
+    var isLast = i === deal.activity.length - 1;
+    html += '<div class="timeline-item">' +
+      '<div class="timeline-marker">' +
+        '<div class="timeline-dot' + (i === 0 ? ' active' : ' completed') + '"></div>' +
+        (isLast ? '' : '<div class="timeline-line"></div>') +
+      '</div>' +
+      '<div class="timeline-content">' +
+        '<div class="timeline-title">' + (act.text || act.type) + '</div>' +
+        '<div class="timeline-date">' + formatDate(act.timestamp) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderDocumentsTab(deal) {
+  var html = '<div class="upload-zone" onclick="alert(\'File upload coming soon\')">' +
+    '<div class="upload-zone-icon"><i data-lucide="upload-cloud" style="width:32px;height:32px"></i></div>' +
+    '<div class="upload-zone-text">Drop files here or click to upload</div>' +
+    '<div class="upload-zone-hint">PDF, DOC, XLS up to 25MB</div>' +
+  '</div>';
+
+  if (!deal.documents || deal.documents.length === 0) {
+    html += '<div class="empty-state" style="margin-top:1.5rem">' +
+      '<div class="empty-state-icon"><i data-lucide="folder-open" style="width:32px;height:32px"></i></div>' +
+      '<div class="empty-state-text">No documents uploaded</div>' +
+    '</div>';
+  } else {
+    html += '<div class="doc-list">';
+    for (var i = 0; i < deal.documents.length; i++) {
+      var doc = deal.documents[i];
+      html += '<div class="doc-item">' +
+        '<div class="doc-icon"><i data-lucide="file-text"></i></div>' +
+        '<div class="doc-info">' +
+          '<div class="doc-name">' + (doc.name || "Document") + '</div>' +
+          '<div class="doc-meta">' + formatDate(doc.uploadedAt) + '</div>' +
+        '</div>' +
+        '<div class="doc-actions">' +
+          '<button class="doc-action-btn"><i data-lucide="download"></i></button>' +
+          '<button class="doc-action-btn"><i data-lucide="trash-2"></i></button>' +
+        '</div>' +
+      '</div>';
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+function renderActivityTab(deal) {
+  var html = '<div style="margin-bottom:1rem">' +
+    '<div class="field" style="margin-bottom:0.5rem">' +
+      '<label>Log Activity</label>' +
+      '<div class="fg2" style="gap:0.5rem">' +
+        '<select id="activityType">' +
+          '<option value="note">Note</option>' +
+          '<option value="call">Call</option>' +
+          '<option value="email">Email</option>' +
+          '<option value="document">Document</option>' +
+          '<option value="offer">Offer</option>' +
+        '</select>' +
+        '<input type="text" id="activityText" placeholder="Activity description...">' +
+      '</div>' +
+    '</div>' +
+    '<button class="btn-save" onclick="logActivity()">Log Activity</button>' +
+  '</div>';
+
+  if (!deal.activity || deal.activity.length === 0) {
+    html += '<div class="empty-state">' +
+      '<div class="empty-state-icon"><i data-lucide="activity" style="width:32px;height:32px"></i></div>' +
+      '<div class="empty-state-text">No activity logged</div>' +
+    '</div>';
+  } else {
+    html += '<div class="activity-feed">';
+    for (var i = 0; i < deal.activity.length; i++) {
+      var act = deal.activity[i];
+      var iconType = act.type || "note";
+      html += '<div class="activity-item">' +
+        '<div class="activity-icon ' + iconType + '"><i data-lucide="' + getActivityIcon(iconType) + '"></i></div>' +
+        '<div class="activity-content">' +
+          '<div class="activity-text">' + (act.text || act.type) + '</div>' +
+          '<div class="activity-meta">' + formatDate(act.timestamp) + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+function getActivityIcon(type) {
+  var icons = {
+    note: "sticky-note",
+    call: "phone",
+    email: "mail",
+    stage_change: "git-branch",
+    document: "file-text",
+    offer: "dollar-sign"
+  };
+  return icons[type] || "circle";
+}
+
+function logActivity() {
+  var type = document.getElementById("activityType")?.value || "note";
+  var text = document.getElementById("activityText")?.value || "";
+  if (!text.trim()) return;
+
+  dealsAddActivity(crmState.selectedDealId, type, text);
+  var deal = dealsGetById(crmState.selectedDealId);
+  if (deal) renderDetailPanelContent(deal);
+}
+
+function renderFinancialsTab(deal) {
+  if (!deal.financials || Object.keys(deal.financials).length === 0) {
+    return '<div class="empty-state">' +
+      '<div class="empty-state-icon"><i data-lucide="calculator" style="width:48px;height:48px"></i></div>' +
+      '<div class="empty-state-text">Run underwriting in the Underwriter tab to populate financials</div>' +
+      '<a href="index.html" class="btn-primary" style="display:inline-block;margin-top:1rem;text-decoration:none;">Go to Underwriter</a>' +
+    '</div>';
+  }
+
+  var f = deal.financials;
+  return '<div class="detail-section">' +
+    '<div class="detail-section-title">Key Metrics</div>' +
+    '<div class="fg3">' +
+      '<div class="stat-card"><div class="stat-label">NOI</div><div class="stat-value green">' + formatCurrency(f.noi) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Cap Rate</div><div class="stat-value">' + (f.capRate || "—") + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">DSCR</div><div class="stat-value">' + (f.dscr || "—") + '</div></div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ══════════════════════════════════════════════════════
+   ADD DEAL MODAL
+══════════════════════════════════════════════════════ */
+function renderAddDealModal() {
+  var overlay = document.getElementById("modalOverlay");
+  var content = document.getElementById("modalContent");
+  if (!overlay || !content) return;
+
+  content.innerHTML = '<div class="modal-header">' +
+    '<h3>Add New Deal</h3>' +
+    '<button class="modal-close" onclick="closeModal()"><i data-lucide="x"></i></button>' +
+  '</div>' +
+  '<div class="modal-body">' +
+    '<div class="fg2" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>Property Name</label><input type="text" id="newPropName" placeholder="e.g. Metro Self Storage"></div>' +
+      '<div class="field"><label>Address</label><input type="text" id="newAddress" placeholder="123 Main St"></div>' +
+    '</div>' +
+    '<div class="fg3" style="margin-bottom:0.65rem;">' +
+      '<div class="field"><label>City</label><input type="text" id="newCity"></div>' +
+      '<div class="field"><label>State</label><input type="text" id="newState" maxlength="2"></div>' +
+      '<div class="field"><label>Asking Price</label><input type="text" id="newPrice" placeholder="1500000"></div>' +
+    '</div>' +
+    '<div class="fg2">' +
+      '<div class="field"><label>Priority</label><select id="newPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>' +
+      '<div class="field"><label>Stage</label><select id="newStage"><option value="prospecting" selected>Prospecting</option><option value="outreach">Outreach</option><option value="under_loi">Under LOI</option><option value="under_contract">Under Contract</option><option value="closing">Closing</option></select></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="modal-footer">' +
+    '<button class="btn-secondary" onclick="closeModal()">Cancel</button>' +
+    '<button class="btn-save" onclick="createNewDeal()">Create Deal</button>' +
+  '</div>';
+
+  overlay.classList.add("open");
+  initLucide();
+}
+
+function closeModal() {
+  var overlay = document.getElementById("modalOverlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+function createNewDeal() {
+  var deal = dealsCreate({
+    propertyName: document.getElementById("newPropName")?.value || "",
+    address: document.getElementById("newAddress")?.value || "",
+    city: document.getElementById("newCity")?.value || "",
+    state: document.getElementById("newState")?.value || "",
+    askingPrice: parseFloat(document.getElementById("newPrice")?.value) || 0,
+    priority: document.getElementById("newPriority")?.value || "medium",
+    stage: document.getElementById("newStage")?.value || "prospecting"
+  });
+
+  dealsAddActivity(deal.id, "note", "Deal created");
+  closeModal();
+  renderTable();
+  renderSidebar();
+}
+
+/* ══════════════════════════════════════════════════════
+   INIT CRM
+══════════════════════════════════════════════════════ */
+function initCRM() {
+  seedDeals();
+  renderSidebar();
+}
+  </script>
   <script>
     /* ══════════════════════════════════════════════════════
        PIPELINE TABLE FUNCTIONS
